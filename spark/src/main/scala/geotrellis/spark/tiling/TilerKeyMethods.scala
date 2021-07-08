@@ -16,7 +16,7 @@
 
 package geotrellis.spark.tiling
 
-import geotrellis.spark._
+import geotrellis.layer.SpatialKey
 import geotrellis.vector._
 import geotrellis.util.MethodExtensions
 

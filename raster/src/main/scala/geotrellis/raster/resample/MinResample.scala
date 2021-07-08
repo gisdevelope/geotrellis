@@ -20,7 +20,6 @@ import geotrellis.raster._
 import geotrellis.vector.Extent
 
 import scala.math
-import spire.syntax.cfor._
 
 /**
   * Takes the average value for all cells within the index boundaries provided by
@@ -40,7 +39,7 @@ class MinResample(tile: Tile, extent: Extent, targetCS: CellSize)
       // Double.NaN would *always* be max
       if (isData(v)) math.min(currentMin, v) else currentMin
     }
-    if (doubleMin == Double.MaxValue) NODATA else doubleMin
+    if (doubleMin == Double.MaxValue) doubleNODATA else doubleMin
   }
 
   def resampleValid(x: Double, y: Double): Int = calculateMin(contributions(x, y))

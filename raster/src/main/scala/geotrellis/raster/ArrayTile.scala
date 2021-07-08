@@ -23,14 +23,14 @@ import spire.syntax.cfor._
   * tile.  Designed to be a near drop-in replacement for Array in many
   * cases.
   */
-trait ArrayTile extends Tile with Serializable {
+abstract class ArrayTile extends Tile with Serializable {
 
   /**
     * Return the [[ArrayTile]] equivalent of this ArrayTile.
     *
     * @return  The object on which the method was invoked
     */
-  def toArrayTile = this
+  def toArrayTile() = this
 
   /**
     * Returns a [[Tile]] equivalent to this [[ArrayTile]], except with
@@ -41,9 +41,6 @@ trait ArrayTile extends Tile with Serializable {
     */
   def convert(targetCellType: CellType): ArrayTile = {
     val tile = ArrayTile.alloc(targetCellType, cols, rows)
-
-    if(targetCellType.isFloatingPoint != cellType.isFloatingPoint)
-      logger.debug(s"Conversion from $cellType to $targetCellType may lead to data loss.")
 
     if(!cellType.isFloatingPoint) {
       cfor(0)(_ < rows, _ + 1) { row =>
@@ -199,7 +196,7 @@ trait ArrayTile extends Tile with Serializable {
     * @return         The result, an ArrayTile
     */
   def combine(other: ArrayTile)(f: (Int, Int) => Int): ArrayTile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
     val output = ArrayTile.alloc(cellType.union(other.cellType), cols, rows)
     var i = 0
@@ -231,6 +228,8 @@ trait ArrayTile extends Tile with Serializable {
         ct.combine(this)((z1, z2) => f(z2, z1))
       case ct: CroppedTile =>
         ct.combine(this)((z1, z2) => f(z2, z1))
+      case t =>
+        this.map((col, row, z) => f(z, t.get(col, row)))
   }
 
   /**
@@ -244,7 +243,7 @@ trait ArrayTile extends Tile with Serializable {
     * @return         The result, an ArrayTile
     */
   def combineDouble(other: ArrayTile)(f: (Double, Double) => Double): ArrayTile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
     val output = ArrayTile.alloc(cellType.union(other.cellType), cols, rows)
     var i = 0
@@ -271,9 +270,11 @@ trait ArrayTile extends Tile with Serializable {
       case ar: ArrayTile =>
         combineDouble(ar)(f)
       case ct: ConstantTile =>
-        ct.combineDouble(this)(f)
+        ct.combineDouble(this)((z1, z2) => f(z2, z1))
       case ct: CompositeTile =>
         ct.combineDouble(this)((z1, z2) => f(z2, z1))
+      case t =>
+        this.mapDouble((col, row, z) => f(z, t.getDouble(col, row)))
     }
   }
 
@@ -285,15 +286,29 @@ trait ArrayTile extends Tile with Serializable {
     * @return         A boolean
     */
   override def equals(other: Any): Boolean = other match {
-    case r: ArrayTile => {
-      if (r == null) return false
-      val len = size
-      if (len != r.size) return false
+    case tile: ArrayTile => {
+      if (tile == null) return false
+      if (tile.cols != cols || tile.rows != rows) return false
+      if (tile.cellType != cellType) return false
+
       var i = 0
-      while (i < len) {
-        if (apply(i) != r(i)) return false
-        i += 1
-      }
+
+      if (cellType.isFloatingPoint)
+        while (i < size) {
+          val value = applyDouble(i)
+          val otherValue = tile.applyDouble(i)
+
+          // if both values are not NaNs and are not equal
+          if (!java.lang.Double.isNaN(value) && !java.lang.Double.isNaN(otherValue) && (value != otherValue)) return false
+          // if one of the values is a NaN
+          if((!java.lang.Double.isNaN(value) && java.lang.Double.isNaN(otherValue)) || java.lang.Double.isNaN(value) && !java.lang.Double.isNaN(otherValue)) return false
+          i += 1
+        }
+      else
+        while (i < size) {
+          if (apply(i) != tile(i)) return false
+          i += 1
+        }
       true
     }
     case _ => false
@@ -347,14 +362,14 @@ trait ArrayTile extends Tile with Serializable {
     *
     * @return  The list
     */
-  def toList = toArray.toList
+  def toList = toArray().toList
 
   /**
     * Return the under-laying array of this [[ArrayTile]] as a list.
     *
     * @return  The list
     */
-  def toListDouble = toArrayDouble.toList
+  def toListDouble = toArrayDouble().toList
 
   /**
     * Return a copy of the underlying array of the present
@@ -362,7 +377,7 @@ trait ArrayTile extends Tile with Serializable {
     *
     * @return  The copy as an Array[Int]
     */
-  def toArray: Array[Int] = {
+  def toArray(): Array[Int] = {
     val len = size
     val arr = Array.ofDim[Int](len)
     var i = 0
@@ -379,7 +394,7 @@ trait ArrayTile extends Tile with Serializable {
     *
     * @return  The copy as an Array[Double]
     */
-  def toArrayDouble: Array[Double] = {
+  def toArrayDouble(): Array[Double] = {
     val len = size
     val arr = Array.ofDim[Double](len)
     var i = 0
@@ -389,6 +404,8 @@ trait ArrayTile extends Tile with Serializable {
     }
     arr
   }
+
+  override def toString: String = s"ArrayTile($cols,$rows,$cellType)"
 }
 
 /**

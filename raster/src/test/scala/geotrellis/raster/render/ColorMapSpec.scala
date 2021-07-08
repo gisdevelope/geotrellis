@@ -17,18 +17,17 @@
 package geotrellis.raster.render
 
 import geotrellis.raster._
-import geotrellis.raster.render._
-import geotrellis.raster.render.png._
+import geotrellis.raster.render.png.IndexedPngEncoding
 import geotrellis.raster.testkit._
-
-import org.scalatest._
 
 import java.io._
 import java.awt.Color
 import javax.imageio._
 
-class ColorMapSpec extends FunSpec with Matchers
-                                   with TileBuilders {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class ColorMapSpec extends AnyFunSpec with Matchers with TileBuilders {
   describe("color map construction") {
     it("should classify ints to colors") {
       val colorMap =
@@ -58,12 +57,12 @@ class ColorMapSpec extends FunSpec with Matchers
 
   describe("color map creation") {
     it("should build a color map with fully specifiable options") {
-      val ndColor = RGBA(0, 0, 0, 100.0)
-      val fallbackColor = RGBA(255, 0, 0, 0)
+      val ndColor = render.RGBA.fromRGBAPct(0, 0, 0, 100.0)
+      val fallbackColor = render.RGBA.fromRGBA(255, 0, 0, 0)
       val colorMap =
         ColorMap((0, 1))
-          .withNoDataColor(ndColor)
-          .withFallbackColor(fallbackColor)
+          .withNoDataColor(ndColor.int)
+          .withFallbackColor(fallbackColor.int)
           .withBoundaryType(Exact)
 
       colorMap.options shouldBe (ColorMap.Options(Exact, ndColor.int, fallbackColor.int, false))

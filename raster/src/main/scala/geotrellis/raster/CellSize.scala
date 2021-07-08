@@ -18,6 +18,9 @@ package geotrellis.raster
 
 import geotrellis.vector.Extent
 
+import _root_.io.circe.generic.JsonCodec
+
+import scala.math.Ordering
 
 /**
   * A case class containing the width and height of a cell.
@@ -25,8 +28,9 @@ import geotrellis.vector.Extent
   * @param  width   The width of a cell
   * @param  height  The height of a cell
   */
+@JsonCodec
 case class CellSize(width: Double, height: Double) {
-  def resolution: Double = math.sqrt(width*height)
+  def resolution: Double = math.sqrt(width * height)
 }
 
 /**
@@ -54,8 +58,8 @@ object CellSize {
     * @param   dims    The numbers of columns and rows as a tuple
     * @return          The CellSize
     */
-  def apply(extent: Extent, dims: (Int, Int)): CellSize = {
-    val (cols, rows) = dims
+  def apply(extent: Extent, dims: Dimensions[Int]): CellSize = {
+    val Dimensions(cols, rows) = dims
     apply(extent, cols, rows)
   }
 
@@ -66,8 +70,13 @@ object CellSize {
     * @param   s  The string
     * @return     The CellSize
     */
-  def fromString(s:String) = {
+  def fromString(s:String): CellSize = {
     val Array(width, height) = s.split(",").map(_.toDouble)
     CellSize(width, height)
+  }
+
+  implicit val cellsizeOrdering = new Ordering[CellSize] {
+    def compare(x: CellSize, y: CellSize): Int =
+    (x.resolution - y.resolution).toInt
   }
 }

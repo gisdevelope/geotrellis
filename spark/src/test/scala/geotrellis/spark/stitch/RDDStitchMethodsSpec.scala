@@ -19,16 +19,14 @@ package geotrellis.spark.stitch
 import geotrellis.proj4.LatLng
 import geotrellis.raster._
 import geotrellis.raster.testkit._
+import geotrellis.layer._
 import geotrellis.spark._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector.Extent
-import org.scalatest.FunSpec
 
-class RDDStitchMethodsSpec extends FunSpec
-    with TileBuilders
-    with TileLayerRDDBuilders
-    with TestEnvironment {
+import org.scalatest.funspec.AnyFunSpec
+
+class RDDStitchMethodsSpec extends AnyFunSpec with TileBuilders with TileLayerRDDBuilders with TestEnvironment {
 
   describe("Stitching spatial rdds") {
     it("should correctly stitch back together single band tile rdd") {
@@ -53,7 +51,7 @@ class RDDStitchMethodsSpec extends FunSpec
           TileLayout(2, 2, 4, 4)
         )
 
-      assertEqual(tile, layer.stitch.tile)
+      assertEqual(tile, layer.stitch().tile)
     }
 
     it("should correctly stitch back together multi band tile rdd") {
@@ -97,7 +95,7 @@ class RDDStitchMethodsSpec extends FunSpec
           TileLayout(2, 2, 4, 4)
         )
 
-      assertEqual(tile, layer.stitch.tile)
+      assertEqual(tile, layer.stitch().tile)
     }
 
     it("should reconstitute a tiled raster to its original size") {
@@ -110,24 +108,24 @@ class RDDStitchMethodsSpec extends FunSpec
       val extent = Extent(
         offset, offset, offset + tile.cols * scale, offset + tile.rows * scale
       )
-      val raster = ProjectedRaster(tile, extent, LatLng)
-      assert(raster.cellSize == CellSize(scale, scale))
+      val praster = ProjectedRaster(tile, extent, LatLng)
+      assert(praster.raster.cellSize == CellSize(scale, scale))
 
-      val layout = LayoutDefinition(raster.rasterExtent, size, size)
+      val layout = LayoutDefinition(praster.raster.rasterExtent, size, size)
       val kb = KeyBounds(
         SpatialKey(0, 0), SpatialKey(layout.layoutCols, layout.layoutRows)
       )
       val tlm = TileLayerMetadata(
-        raster.tile.cellType, layout, raster.extent, raster.crs, kb)
+        praster.tile.cellType, layout, praster.extent, praster.crs, kb)
 
-      val rdd = sc.makeRDD(Seq((raster.projectedExtent, raster.tile)))
+      val rdd = sc.makeRDD(Seq((praster.projectedExtent, praster.tile)))
 
       val tiled = TileLayerRDD(rdd.tileToLayout(tlm), tlm)
       val restitched: Tile = withSpatialTileRDDMethods(tiled).stitch().crop(tile.cols, tile.rows)
 
       assert(restitched.toArray() === tile.toArray(),
         s"""Expected:
-           |${raster.tile.asciiDraw()}
+           |${praster.tile.asciiDraw()}
            |
            |Stitched:
            |${restitched.asciiDraw()}
@@ -136,20 +134,45 @@ class RDDStitchMethodsSpec extends FunSpec
     }
 
     it("should allow stitch RDD of unequally-dimensioned tiles") {
-      val tiles = sc.parallelize(Array(
-        (SpatialKey(10,31), IntArrayTile.ofDim( 5, 5).map{ (x, y, _) => math.max(x,    y) }),
-        (SpatialKey(11,31), IntArrayTile.ofDim(15, 5).map{ (x, y, _) => math.max(x+5,  y) }),
-        (SpatialKey(12,31), IntArrayTile.ofDim( 7, 5).map{ (x, y, _) => math.max(x+20, y) }),
-        (SpatialKey(10,32), IntArrayTile.ofDim( 5,15).map{ (x, y, _) => math.max(x,    y+5) }),
-        (SpatialKey(11,32), IntArrayTile.ofDim(15,15).map{ (x, y, _) => math.max(x+5,  y+5) }),
-        (SpatialKey(12,32), IntArrayTile.ofDim( 7,15).map{ (x, y, _) => math.max(x+20, y+5) }),
-        (SpatialKey(10,33), IntArrayTile.ofDim( 5, 7).map{ (x, y, _) => math.max(x,    y+20) }),
-        (SpatialKey(11,33), IntArrayTile.ofDim(15, 7).map{ (x, y, _) => math.max(x+5,  y+20) }),
-        (SpatialKey(12,33), IntArrayTile.ofDim( 7, 7).map{ (x, y, _) => math.max(x+20, y+20) })
+      val tiles = sc.parallelize(Array[(SpatialKey, Tile)](
+        (SpatialKey(10,31), IntArrayTile.ofDim( 5, 5).map { (x: Int, y: Int, _: Int) => math.max(x, y) }),
+        (SpatialKey(11,31), IntArrayTile.ofDim(15, 5).map{ (x: Int, y: Int, _: Int) => math.max(x+ 5, y) }),
+        (SpatialKey(12,31), IntArrayTile.ofDim( 7, 5).map{ (x: Int, y: Int, _: Int) => math.max(x +20, y) }),
+        (SpatialKey(10,32), IntArrayTile.ofDim( 5,15).map{ (x: Int, y: Int, _: Int) => math.max(x,    y+5) }),
+        (SpatialKey(11,32), IntArrayTile.ofDim(15,15).map{ (x: Int, y: Int, _: Int) => math.max(x+5,  y+5) }),
+        (SpatialKey(12,32), IntArrayTile.ofDim( 7,15).map{ (x: Int, y: Int, _: Int) => math.max(x+20, y+5) }),
+        (SpatialKey(10,33), IntArrayTile.ofDim( 5, 7).map{ (x: Int, y: Int, _: Int) => math.max(x,    y+20) }),
+        (SpatialKey(11,33), IntArrayTile.ofDim(15, 7).map{ (x: Int, y: Int, _: Int) => math.max(x+5,  y+20) }),
+        (SpatialKey(12,33), IntArrayTile.ofDim( 7, 7).map{ (x: Int, y: Int, _: Int) => math.max(x+20, y+20) })
       ))
-      val reference = IntArrayTile.ofDim(27,27).map{ (x, y, _) => math.max(x, y) }
+      val reference = IntArrayTile.ofDim(27,27).map{ (x: Int, y: Int, _) => math.max(x, y) }
 
-      assertEqual(tiles.stitch, reference)
+      assertEqual(tiles.stitch(), reference)
+    }
+
+    it("should sparse stitch an RDD with an offset extent") {
+        val expectedTile =
+          createTile(
+            Array(
+              NaN, NaN, NaN, NaN, NaN,
+              1, 1,  1, 1, NaN,
+              1, 1,  1, 1, NaN,
+              1, 1,  1, 1, NaN,
+              1, 1,  1, 1, NaN
+            ), 5, 5)
+
+        val tile =
+          createTile(
+            Array(
+              1, 1,  1, 1,
+              1, 1,  1, 1,
+              1, 1,  1, 1,
+              1, 1,  1, 1
+            ), 4, 4)
+        val extent = Extent(0, 0, 4, 4)
+        val layer = createTileLayerRDD(Raster(tile, extent), TileLayout(4, 4, 1, 1))
+        val testExtent = Extent(0, 0, 5, 5)
+        assertEqual(layer.sparseStitch(testExtent).get.tile, expectedTile)
     }
   }
 }

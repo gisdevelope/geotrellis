@@ -18,24 +18,21 @@ package geotrellis.spark.costdistance
 
 import geotrellis.proj4.LatLng
 import geotrellis.raster._
+import geotrellis.layer._
 import geotrellis.spark._
 import geotrellis.spark.testkit.TestEnvironment
-import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
-
 import org.apache.spark.rdd.RDD
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-
-class RDDCostDistanceMethodsSpec extends FunSpec
-    with Matchers
-    with TestEnvironment {
+class RDDCostDistanceMethodsSpec extends AnyFunSpec with Matchers with TestEnvironment {
 
   val rdd: RDD[(SpatialKey, Tile)] with Metadata[TileLayerMetadata[SpatialKey]] = {
     val tile = IntArrayTile(Array.fill[Int](25)(1), 5, 5)
     val extent = Extent(0, 0, 10, 5)
-    val gridExtent = GridExtent(extent, 1, 1) // 10×5 pixels
+    val gridExtent = GridExtent[Long](extent, CellSize(1, 1)) // 10×5 pixels
     val layoutDefinition = LayoutDefinition(gridExtent, 10, 5)
     val bounds = Bounds(SpatialKey(0,0), SpatialKey(1,0))
     val tileLayerMetadata = TileLayerMetadata(IntCellType, layoutDefinition, extent, LatLng, bounds)
@@ -48,16 +45,16 @@ class RDDCostDistanceMethodsSpec extends FunSpec
   describe("Cost-Distance Extension Methods") {
 
     it("The costdistance Method Should Work (1/2)") {
-      val expected = IterativeCostDistance(rdd, points).collect.toList
-      val actual = rdd.costdistance(points).collect.toList
+      val expected = IterativeCostDistance(rdd, points).collect().toList
+      val actual = rdd.costdistance(points).collect().toList
 
       actual should be (expected)
     }
 
     it("The costdistance Method Should Work (2/2)") {
       val resolution = IterativeCostDistance.computeResolution(rdd)
-      val expected = IterativeCostDistance(rdd, points, resolution).collect.toList
-      val actual = rdd.costdistance(points, resolution).collect.toList
+      val expected = IterativeCostDistance(rdd, points, resolution).collect().toList
+      val actual = rdd.costdistance(points, resolution).collect().toList
 
       actual should be (expected)
     }

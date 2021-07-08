@@ -16,7 +16,6 @@
 
 package geotrellis.raster
 
-import geotrellis.raster.resample._
 import geotrellis.vector.Extent
 
 import java.nio.ByteBuffer
@@ -27,7 +26,7 @@ import spire.syntax.cfor._
 /**
   * The trait underlying constant tile types.
   */
-trait ConstantTile extends Tile {
+abstract class ConstantTile extends Tile {
 
   /** Precomputed view of tile cells as seen by [[get]] method */
   protected val iVal: Int
@@ -75,9 +74,6 @@ trait ConstantTile extends Tile {
     * @return            The new Tile
     */
   def convert(newType: CellType): Tile = {
-    if(newType.isFloatingPoint != cellType.isFloatingPoint)
-      logger.warn(s"Conversion from $cellType to $newType may lead to data loss.")
-
     newType match {
       case BitCellType => new BitConstantTile(if (iVal == 0) false else true, cols, rows)
       case ct: ByteCells => ByteConstantTile(iVal.toByte, cols, rows, ct)
@@ -99,7 +95,7 @@ trait ConstantTile extends Tile {
     *
     * @param  f  A function from Int to Unit
     */
-  def foreach(f: Int => Unit) {
+  def foreach(f: Int => Unit): Unit = {
     var i = 0
     val len = size
     while (i < len) { f(iVal); i += 1 }

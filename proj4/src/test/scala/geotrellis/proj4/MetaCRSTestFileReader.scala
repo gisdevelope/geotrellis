@@ -19,9 +19,7 @@ package geotrellis.proj4
 import java.io.File
 import com.opencsv.CSVReader
 
-import scala.collection.breakOut
 import scala.collection.JavaConverters._
-import scala.util.Try
 
 /**
  * Reads a file in MetaCRS Test format
@@ -51,7 +49,7 @@ object MetaCRSTestFileReader {
       .filter(r => r.nonEmpty && !r.head.startsWith("#"))
       .drop(1)
       .map(parseTest)
-      .to[List]
+      .toList
   }
 
   private def parseTest(cols: Array[String]): MetaCRSTestCase = {

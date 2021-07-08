@@ -19,9 +19,10 @@ package geotrellis.raster.resample
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class MinResampleSpec extends FunSpec with Matchers {
+class MinResampleSpec extends AnyFunSpec with Matchers {
 
   describe("it should resample to nodata when only nodata in tile") {
 
@@ -40,7 +41,8 @@ class MinResampleSpec extends FunSpec with Matchers {
                                        doubleNODATA, doubleNODATA, doubleNODATA), 3, 3)
       val extent = Extent(0, 0, 10, 10)
       val cellsize = CellSize(extent, 10, 10)
-      tile.resample(extent, 1, 1, Min).get(0, 0) should be (NODATA)
+      tile.resample(extent, 1, 1, Max).getDouble(0, 0).isNaN shouldBe true
+      tile.resample(extent, 1, 1, Max).get(0,0) should be (NODATA)
     }
 
     it("should for an integer tile compute nodata as minimum value") {

@@ -16,7 +16,8 @@
 
 package geotrellis.vector.check.jts
 
-import com.vividsolutions.jts.geom._
+import geotrellis.vector.GeomFactory
+import org.locationtech.jts.geom._
 
 import org.scalacheck._
 import Prop._
@@ -66,7 +67,7 @@ object PointCheck extends Properties("Point") {
   }
 
   property("within[MultiPoint]") = forAll { (p: Point) =>
-    val mp = factory.createMultiPoint(
+    val mp = GeomFactory.factory.createMultiPointFromCoords(
       Array(new Coordinate(p.getX, p.getY), new Coordinate(p.getX + 5.0, p.getY + 5.0))
     )
     p.within(mp) == true

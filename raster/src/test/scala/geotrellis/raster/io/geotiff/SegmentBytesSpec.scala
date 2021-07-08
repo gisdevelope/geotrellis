@@ -17,17 +17,18 @@
 package geotrellis.raster.io.geotiff
 
 import geotrellis.util._
-import geotrellis.raster._
-import geotrellis.raster.io.geotiff.reader._
+import geotrellis.raster.io.geotiff.tags.TiffTags
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 trait Tester {
   def paths: List[String]
 
   class Tester(path: String) {
-    val tiffTags = TiffTagsReader.read(path)
+    val tiffTags = TiffTags.read(path)
     val byteBuffer= Filesystem.toMappedByteBuffer(path)
     val arraySegmentBytes: ArraySegmentBytes =
       ArraySegmentBytes(byteBuffer, tiffTags)
@@ -38,17 +39,17 @@ trait Tester {
     val geoTiff =
       if (tiffTags.bandCount == 1) {
         val tiff = SinglebandGeoTiff(path)
-        tiff.copy(tile = tiff.tile.toArrayTile)
+        tiff.copy(tile = tiff.tile.toArrayTile())
       } else {
         val tiff = MultibandGeoTiff(path)
-        tiff.copy(tile = tiff.tile.toArrayTile)
+        tiff.copy(tile = tiff.tile.toArrayTile())
       }
 
     val actual = geoTiff.imageData.segmentBytes
   }
 }
 
-class SegmentBytesSpec extends FunSpec
+class SegmentBytesSpec extends AnyFunSpec
   with GeoTiffTestUtils
   with Matchers
   with BeforeAndAfterAll
@@ -102,7 +103,7 @@ class SegmentBytesSpec extends FunSpec
       assert(tester.bufferSegmentBytes.size == tester.tiffTags.segmentCount)
     }
     it("should read in a large file") {
-      val tiffTags = TiffTagsReader.read(largeFile)
+      val tiffTags = TiffTags.read(largeFile)
       val byteBuffer = Filesystem.toMappedByteBuffer(largeFile)
       LazySegmentBytes(byteBuffer, tiffTags)
     }

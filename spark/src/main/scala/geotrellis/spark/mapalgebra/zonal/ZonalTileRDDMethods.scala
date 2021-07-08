@@ -16,11 +16,7 @@
 
 package geotrellis.spark.mapalgebra.zonal
 
-import geotrellis.raster.mapalgebra.zonal._
-import geotrellis.raster.histogram._
 import geotrellis.raster._
-import geotrellis.spark._
-import geotrellis.spark.mapalgebra._
 import geotrellis.util.MethodExtensions
 
 import org.apache.spark.Partitioner

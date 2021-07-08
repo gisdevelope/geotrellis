@@ -16,14 +16,14 @@
 
 package geotrellis.vector.voronoi
 
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.geom.Coordinate
 import org.apache.commons.math3.linear._
 import geotrellis.vector._
 import geotrellis.vector.mesh.HalfEdgeTable
 import geotrellis.vector.triangulation._
 
-import scala.collection.mutable.{ListBuffer, Map}
-import scala.math.{abs, max, sqrt}
+import scala.collection.mutable.ListBuffer
+import scala.math.{abs, sqrt}
 import spire.syntax.cfor._
 
 object VoronoiDiagram {
@@ -40,7 +40,7 @@ object VoronoiDiagram {
   case class V2 (v: RealVector) {
     def -(that: V2) = V2(v subtract that.v)
     def +(that: V2) = V2(v add that.v)
-    def +(that: Coordinate) = new Coordinate(that.x + x, that.y + y)
+    def +(that: Coordinate) = new Coordinate(that.x + x(), that.y + y())
     def *(s: Double) = V2(v mapMultiply s)
     def dot(that: V2): Double = v dotProduct that.v
     def length() = { sqrt(v dotProduct v) }
@@ -53,10 +53,10 @@ object VoronoiDiagram {
     }
     def x() = v.getEntry(0)
     def y() = v.getEntry(1)
-    override def toString() = { s"($x,$y)" }
-    def toCoord() = new Coordinate(x, y)
-    def rot90CCW() = V2(-y, x)
-    def rot90CW() = V2(y, -x)
+    override def toString() = { s"(${x()},${y()})" }
+    def toCoord() = new Coordinate(x(), y())
+    def rot90CCW() = V2(-y(), x())
+    def rot90CW() = V2(y(), -x())
   }
 
   sealed trait CellBound
@@ -66,7 +66,7 @@ object VoronoiDiagram {
 
   private final val EPSILON = 1e-10
 
-  private def cellBoundsNew(het: HalfEdgeTable, verts: Int => Coordinate, extent: Extent)(incidentEdge: Int): Seq[CellBound] = {
+  private def cellBoundsNew(het: HalfEdgeTable, verts: Int => Coordinate, extent: Extent)(incidentEdge: Int): ListBuffer[CellBound] = {
     import het._
 
     var e = incidentEdge
@@ -80,7 +80,7 @@ object VoronoiDiagram {
       val xplus = origin + vplus * 0.5
       val x = origin + v * 0.5
       val xminus = origin + vminus * 0.5
-      val norm = v.rot90CCW.normalize
+      val norm = v.rot90CCW().normalize()
 
       val aplus = - ((x - xplus).dot(vplus)) / (norm dot vplus)
       val aminus = - ((x - xminus).dot(vminus)) / (norm dot vminus)
@@ -88,25 +88,25 @@ object VoronoiDiagram {
       if (abs(norm dot vplus) < EPSILON) {
         if (abs(norm dot vminus) < EPSILON) {
           // Linear triangulation; corresponding cell edge is an infinite line
-          l ++= Seq(/*ReverseRay(x.toCoord, norm * (-1)), */Ray(x.toCoord, norm))
+          l ++= Seq(/*ReverseRay(x.toCoord, norm * (-1)), */Ray(x.toCoord(), norm))
         } else {
           // On boundary; next "face center" is point at infinity
-          l += Ray((x + norm * aminus).toCoord, norm)
+          l += Ray((x + norm * aminus).toCoord(), norm)
         }
       } else if (abs(norm dot vminus) < EPSILON) {
         // On boundary; previous "face center" is point at infinity
-        ReverseRay((x + norm * aplus).toCoord, norm * (-1))
+        ReverseRay((x + norm * aplus).toCoord(), norm * (-1))
       } else if (abs(aplus - aminus) > EPSILON) {
         if (aplus > aminus) {
           // "Normal case"; cell bound is line segment
-          l += BoundedRay((x + norm * aminus).toCoord, norm * (aplus - aminus))
+          l += BoundedRay((x + norm * aminus).toCoord(), norm * (aplus - aminus))
         } else {
-          if (RobustPredicates.isCCW(x.x, x.y, origin.x, origin.y, xminus.x, xminus.y)) {
+          if (RobustPredicates.isCCW(x.x(), x.y(), origin.x(), origin.y(), xminus.x(), xminus.y())) {
             // On boundary; next "face center" is point at infinity
-            l += Ray((x + norm * aminus).toCoord, norm)
+            l += Ray((x + norm * aminus).toCoord(), norm)
           } else {
             // On boundary; previous "face center" is point at infinity
-            l += ReverseRay((x + norm * aplus).toCoord, norm * (-1))
+            l += ReverseRay((x + norm * aplus).toCoord(), norm * (-1))
           }
         }
       } else {
@@ -118,7 +118,7 @@ object VoronoiDiagram {
     l
   }
 
-  private def cellExtentIntersection(het: HalfEdgeTable, verts: Int => Coordinate, incidentEdge: Int)(cell: Seq[CellBound], extent: Extent) = {
+  private def cellExtentIntersection(het: HalfEdgeTable, verts: Int => Coordinate, incidentEdge: Int)(cell: ListBuffer[CellBound], extent: Extent) = {
     val Extent(xmin, ymin, xmax, ymax) = extent
     val expts = ListBuffer((xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)).map{ case (x, y) => new Coordinate(x, y) }
 
@@ -135,7 +135,7 @@ object VoronoiDiagram {
           case ReverseRay(base, dir) => (base, dir * (-1))
         }
 
-        ! RobustPredicates.isCCW(base.x + dir.x, base.y + dir.y, base.x, base.y, c.x, c.y)
+        ! RobustPredicates.isCCW(base.x + dir.x(), base.y + dir.y(), base.x, base.y, c.x, c.y)
       }
 
       def crossing(ca: Coordinate, cb: Coordinate) = {
@@ -144,12 +144,12 @@ object VoronoiDiagram {
           case Ray(base, dir) => (V2(base), dir)
           case ReverseRay(base, dir) => (V2(base), dir)
         }
-        val norm = dir.rot90CCW
+        val norm = dir.rot90CCW()
         val a = V2(ca)
         val v = V2(cb) - a
         val alpha = (base - a).dot(norm) / (v dot norm)
 
-        (a + v * alpha).toCoord
+        (a + v * alpha).toCoord()
       }
 
       val contained = poly.map(isContained(_))
@@ -185,7 +185,7 @@ object VoronoiDiagram {
       None
     } else {
       clippedCorners += clippedCorners.head
-      val poly = Polygon(clippedCorners.map(Point.jtsCoord2Point(_)))
+      val poly = Polygon(clippedCorners.map(Point(_)).toSeq)
       Some(poly)
     }
   }
@@ -214,7 +214,7 @@ class VoronoiDiagram(val dt: DelaunayTriangulation, val extent: Extent) extends 
   def voronoiCell(i: Int): Option[Polygon] = {
     if (dt.liveVertices.size == 1) {
       if (dt.liveVertices(i)) {
-        Some(extent.toPolygon)
+        Some(extent.toPolygon())
       } else
         throw new IllegalArgumentException(s"Cannot build Voronoi cell for nonexistent vertex $i")
     } else

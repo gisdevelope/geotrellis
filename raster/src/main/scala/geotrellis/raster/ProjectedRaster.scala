@@ -17,7 +17,6 @@
 package geotrellis.raster
 
 import geotrellis.proj4.CRS
-import geotrellis.raster.reproject._
 import geotrellis.vector.{Extent, ProjectedExtent}
 
 
@@ -29,43 +28,47 @@ object ProjectedRaster {
     * Implicit conversion from a [[Raster]], CRS pair to a
     * [[ProjectedRaster]].
     */
-  implicit def tupToRaster[T <: CellGrid](tup: (Raster[T], CRS)): ProjectedRaster[T] =
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
+  implicit def tupToRaster[T <: CellGrid[Int]](tup: (Raster[T], CRS)): ProjectedRaster[T] =
     ProjectedRaster(tup._1, tup._2)
 
   /**
     * Implicit conversion from a [[ProjectedRaster]] to a [[Raster]].
     */
-  implicit def projectedToRaster[T <: CellGrid](p: ProjectedRaster[T]): Raster[T] =
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
+  implicit def projectedToRaster[T <: CellGrid[Int]](p: ProjectedRaster[T]): Raster[T] =
     p.raster
 
   /**
     * Implicit conversion from a [[ProjectedRaster]] to a tile.
     */
-  implicit def projectedToTile[T <: CellGrid](p: ProjectedRaster[T]): T =
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
+  implicit def projectedToTile[T <: CellGrid[Int]](p: ProjectedRaster[T]): T =
     p.raster.tile
 
   /**
     * Take a [[Tile]], and Extent, and a CRS and use them to produce a
     * [[ProjectedRaster]].
     */
-  def apply[T <: CellGrid](tile: T, extent: Extent, crs: CRS): ProjectedRaster[T] =
+  def apply[T <: CellGrid[Int]](tile: T, extent: Extent, crs: CRS): ProjectedRaster[T] =
     ProjectedRaster(Raster(tile, extent), crs)
 
   /**
     * Take a [[Tile]], and ProjectedExtent, and a CRS and use them to produce a
     * [[ProjectedRaster]].
     */
-  def apply[T <: CellGrid](tile: T, extent: ProjectedExtent): ProjectedRaster[T] =
+  def apply[T <: CellGrid[Int]](tile: T, extent: ProjectedExtent): ProjectedRaster[T] =
     ProjectedRaster(Raster(tile, extent.extent), extent.crs)
 }
 
 /**
   * The [[ProjectedRaster]] type.
   */
-case class ProjectedRaster[T <: CellGrid](raster: Raster[T], crs: CRS) {
-  def tile = raster.tile
-  def extent = raster.extent
-  def projectedExtent = ProjectedExtent(extent, crs)
-  def cols = raster.cols
-  def rows = raster.rows
+case class ProjectedRaster[T <: CellGrid[Int]](raster: Raster[T], crs: CRS) {
+  def tile: T = raster.tile
+  def extent: Extent = raster.extent
+  def projectedExtent: ProjectedExtent = ProjectedExtent(extent, crs)
+  def cols: Int = raster.cols
+  def rows: Int = raster.rows
+  def mapTile[A <: CellGrid[Int]](f: T => A): ProjectedRaster[A] = this.copy(raster = raster.mapTile(f))
 }

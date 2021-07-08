@@ -16,14 +16,27 @@
 
 package geotrellis.vector
 
-import GeomFactory._
 import geotrellis.proj4.{CRS, Transform}
 
-import com.vividsolutions.jts.{geom => jts}
+import org.locationtech.jts.{geom => jts}
+import cats.syntax.either._
+import _root_.io.circe._
+import _root_.io.circe.syntax._
+import _root_.io.circe.generic.JsonCodec
 
 case class ExtentRangeError(msg:String) extends Exception(msg)
 
 object Extent {
+  val listEncoder: Encoder[Extent] =
+    Encoder.instance { extent => List(extent.xmin, extent.ymin, extent.xmax, extent.ymax).asJson }
+
+  val listDecoder: Decoder[Extent] =
+    Decoder.decodeJson.emap { value =>
+      value.as[List[Double]]
+        .map { case List(xmin, ymin, xmax, ymax) => Extent(xmin, ymin, xmax, ymax) }
+        .leftMap(_ => s"Extent [xmin,ymin,xmax,ymax] expected: $value")
+    }
+
   def apply(env: jts.Envelope): Extent =
     Extent(env.getMinX, env.getMinY, env.getMaxX, env.getMaxY)
 
@@ -36,10 +49,11 @@ object Extent {
     Extent(xmin,ymin,xmax,ymax)
   }
 
+  // The following enables extents to be written to GeoJSON (among other uses)
   implicit def toPolygon(extent: Extent): Polygon =
-    extent.toPolygon
+    extent.toPolygon()
 
-  implicit def jts2Extent(env: jts.Envelope): Extent =
+  implicit def envelope2Extent(env: jts.Envelope): Extent =
     Extent(env)
 }
 
@@ -48,51 +62,13 @@ object Extent {
   * @param extent The Extent which is projected
   * @param crs    The CRS projection of this extent
   */
+@JsonCodec
 case class ProjectedExtent(extent: Extent, crs: CRS) {
   def reproject(dest: CRS): Extent =
     extent.reproject(crs, dest)
 
-  /** Performs adaptive refinement to produce a Polygon representation of the projected region.
-    *
-    * Generally, rectangular regions become curvilinear regions after geodetic projection.
-    * This function creates a polygon giving an accurate representation of the post-projection
-    * region.  This function does its work by recursively splitting extent edges, until the
-    * subdivided edge is "close enough" to the unrefined edge.
-    *
-    * @param dest
-    * @param relError   A tolerance value telling how much deflection is allowed in terms of
-    *                   distance from the original line to the new point
-    */
-  def reprojectAsPolygon(dest: CRS, relError: Double = 0.01): Polygon = {
-    val transform = Transform(crs, dest)
-
-    def refine(p0: (Point, (Double, Double)), p1: (Point, (Double, Double))): List[(Point, (Double, Double))] = {
-      val ((a, (x0, y0)), (b, (x1, y1))) = (p0, p1)
-      val m = Point(0.5 * (a.x + b.x), 0.5 * (a.y + b.y))
-      val (x2, y2) = transform(m.x, m.y)
-
-      import math.{abs, pow, sqrt}
-
-      val deflect = abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1) / sqrt(pow(y2 - y1, 2) + pow(x2 - x1, 2))
-      val length = sqrt(pow(x0 - x1, 2) + pow(y0 - y1, 2))
-
-      val p2 = m -> (x2, y2)
-      if (deflect / length < relError) {
-        List(p2)
-      } else {
-        refine(p0, p2) ++ (p2 :: refine(p2, p1))
-      }
-    }
-
-    val pts = Array(extent.southWest, extent.southEast, extent.northEast, extent.northWest)
-      .map{ p => (p, transform(p.x, p.y)) }
-
-    Polygon ( ((pts(0) :: refine(pts(0), pts(1))) ++ 
-               (pts(1) :: refine(pts(1), pts(2))) ++ 
-               (pts(2) :: refine(pts(2), pts(3))) ++
-               (pts(3) :: refine(pts(3), pts(0))) ++
-               List(pts(0))).map{ case (_, (x, y)) => Point(x, y) } )
-  }
+  def reprojectAsPolygon(dest: CRS, relError: Double = 0.01): jts.Polygon =
+    extent.reprojectAsPolygon(Transform(crs, dest), relError)
 }
 
 /** ProjectedExtent companion object */
@@ -108,6 +84,7 @@ object ProjectedExtent {
   * @param xmax The maximum x coordinate
   * @param ymax The maximum y coordinate
   */
+@JsonCodec
 case class Extent(
   xmin: Double, ymin: Double,
   xmax: Double, ymax: Double
@@ -117,26 +94,25 @@ case class Extent(
   if (xmin > xmax) { throw ExtentRangeError(s"Invalid Extent: xmin must be less than xmax (xmin=$xmin, xmax=$xmax)") }
   if (ymin > ymax) { throw ExtentRangeError(s"Invalid Extent: ymin must be less than ymax (ymin=$ymin, ymax=$ymax)") }
 
-  def jtsEnvelope: com.vividsolutions.jts.geom.Envelope =
-    new com.vividsolutions.jts.geom.Envelope(xmin, xmax, ymin, ymax)
+  def jtsEnvelope: jts.Envelope = new jts.Envelope(xmin, xmax, ymin, ymax)
 
   val width: Double = xmax - xmin
   val height: Double = ymax - ymin
 
-  def min: Point = Point(xmin, ymin)
-  def max: Point = Point(xmax, ymax)
+  def min: jts.Point = Point(xmin, ymin)
+  def max: jts.Point = Point(xmax, ymax)
 
   /** The SW corner (xmin, ymin) as a Point. */
-  def southWest: Point = Point(xmin, ymin)
+  def southWest: jts.Point = Point(xmin, ymin)
 
   /** The SE corner (xmax, ymin) as a Point. */
-  def southEast: Point = Point(xmax, ymin)
+  def southEast: jts.Point = Point(xmax, ymin)
 
   /** The NE corner (xmax, ymax) as a Point. */
-  def northEast: Point = Point(xmax, ymax)
+  def northEast: jts.Point = Point(xmax, ymax)
 
   /** The NW corner (xmin, ymax) as a Point. */
-  def northWest: Point = Point(xmin, ymax)
+  def northWest: jts.Point = Point(xmin, ymax)
 
   /** The area of this extent */
   def area: Double = width * height
@@ -151,7 +127,7 @@ case class Extent(
   def isEmpty: Boolean = area == 0
 
   /** The centroid of this extent */
-  def center: Point =
+  def center: jts.Point =
     Point((xmin + xmax) / 2.0, (ymin + ymax) / 2.0)
 
   /** Predicate for whether this extent intersects the interior of another */
@@ -169,7 +145,7 @@ case class Extent(
     other.ymin > ymax)
 
   /** Predicate for whether this extent intersects another */
-  def intersects(p: Point): Boolean =
+  def intersects(p: jts.Point): Boolean =
     intersects(p.x, p.y)
 
   /** Predicate for whether this extent intersects the specified point */
@@ -192,7 +168,7 @@ case class Extent(
     *       which is unlike the JTS Envelope.contains, which would include the
     *       envelope boundary.
     */
-  def contains(p: Point): Boolean =
+  def contains(p: jts.Point): Boolean =
     contains(p.x, p.y)
 
   /** Tests if the given point lies in or on the envelope.
@@ -209,7 +185,7 @@ case class Extent(
     contains(other)
 
   /** Predicate for whether this extent covers a point */
-  def covers(p: Point): Boolean =
+  def covers(p: jts.Point): Boolean =
     covers(p.x, p.y)
 
   /** Predicate for whether this extent covers a point */
@@ -262,8 +238,10 @@ case class Extent(
     intersection(other)
 
   /** Create a new extent using a buffer around this extent */
-  def buffer(d: Double): Extent =
-    Extent(xmin - d, ymin - d, xmax + d, ymax + d)
+  def buffer(d: Double): Extent = buffer(d, d)
+
+  def buffer(width: Double, height: Double): Extent =
+    Extent(xmin - width, ymin - height, xmax + width, ymax + height)
 
   /** Orders two bounding boxes by their (geographically) lower-left corner. The bounding box
     * that is further south (or west in the case of a tie) comes first.
@@ -305,7 +283,7 @@ case class Extent(
     combine(other)
 
   /** Return the smallest extent that contains this extent and the provided point. */
-  def expandToInclude(p: Point): Extent =
+  def expandToInclude(p: jts.Point): Extent =
     expandToInclude(p.x, p.y)
 
   /** Return the smallest extent that contains this extent and the provided point. */
@@ -341,8 +319,8 @@ case class Extent(
     )
 
   /** Return this extent as a polygon */
-  def toPolygon(): Polygon =
-    Polygon( Line((xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymin)) )
+  def toPolygon(): jts.Polygon =
+    Polygon( LineString((xmin, ymin), (xmin, ymax), (xmax, ymax), (xmax, ymin), (xmin, ymin)) )
 
   /** Equality check against this extent
     *

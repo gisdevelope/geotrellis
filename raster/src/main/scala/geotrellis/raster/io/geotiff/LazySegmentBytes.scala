@@ -16,11 +16,11 @@
 
 package geotrellis.raster.io.geotiff
 
-import com.typesafe.scalalogging.LazyLogging
 import geotrellis.util._
 import geotrellis.raster.io.geotiff.tags._
+
+import org.log4s._
 import monocle.syntax.apply._
-import geotrellis.raster.io.geotiff.util._
 
 /**
   * LazySegmentBytes represents a lazy GeoTiff segments reader
@@ -38,13 +38,15 @@ class LazySegmentBytes(
   tiffTags: TiffTags,
   maxChunkSize: Int = 32 * 1024 * 1024,
   maxOffsetBetweenChunks: Int = 1024
-) extends SegmentBytes with LazyLogging {
+) extends SegmentBytes {
+  @transient private[this] lazy val logger = getLogger
+
   import LazySegmentBytes.Segment
 
   def length: Int = tiffTags.segmentCount
 
   val (segmentOffsets, segmentByteCounts) =
-    if (tiffTags.hasStripStorage) {
+    if (tiffTags.hasStripStorage()) {
       val stripOffsets = tiffTags &|->
         TiffTags._basicTags ^|->
         BasicTags._stripOffsets get
@@ -76,19 +78,19 @@ class LazySegmentBytes(
       Segment(id, offset, offset + length - 1)
     }}.toSeq
       .sortBy(_.startOffset) // sort segments such that we inspect them in disk order
-      .foldLeft((0l, List(List.empty[Segment]))) { case ((chunkSize, headChunk :: commitedChunks), seg) =>
-      // difference of offsets should be <= maxOffsetBetweenChunks
-      // otherwise everything between these offsets would be read by reader
-      // and the intention is to group segments by location and to limit groups by size
-      val isSegmentNearChunk =
-        headChunk.headOption.map { c =>
-          seg.startOffset - c.endOffset <= maxOffsetBetweenChunks
-        }.getOrElse(true)
+      .foldLeft((0L, List(List.empty[Segment]))) {
+        case ((chunkSize, headChunk :: commitedChunks), seg) =>
+          // difference of offsets should be <= maxOffsetBetweenChunks
+          // otherwise everything between these offsets would be read by reader
+          // and the intention is to group segments by location and to limit groups by size
+          val isSegmentNearChunk = headChunk.headOption.forall { c => seg.startOffset - c.endOffset <= maxOffsetBetweenChunks }
 
-      if (chunkSize + seg.size <= maxChunkSize && isSegmentNearChunk)
-        (chunkSize + seg.size) -> ((seg :: headChunk) :: commitedChunks)
-      else
-        seg.size -> ((seg :: Nil) :: headChunk :: commitedChunks)
+          if (chunkSize + seg.size <= maxChunkSize && isSegmentNearChunk)
+            (chunkSize + seg.size) -> ((seg :: headChunk) :: commitedChunks)
+          else
+            seg.size -> ((seg :: Nil) :: headChunk :: commitedChunks)
+        // should never happen
+        case (_, seg) => seg.size -> Nil
     }
   }._2.reverse.map(_.reverse) // get segments back in offset order
 
@@ -111,7 +113,7 @@ class LazySegmentBytes(
   def getSegments(indices: Traversable[Int]): Iterator[(Int, Array[Byte])] = {
     val chunks = chunkSegments(indices)
     chunks
-      .toIterator
+      .iterator
       .flatMap(chunk => readChunk(chunk))
   }
 

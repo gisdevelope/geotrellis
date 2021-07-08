@@ -19,10 +19,11 @@ package geotrellis.raster.stitch
 import geotrellis.raster._
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class StitcherSpec extends FunSpec with Matchers 
-                                   with TileBuilders {
+class StitcherSpec extends AnyFunSpec with Matchers with TileBuilders {
+
   describe("Stitcher[Tile]") {
     it("should stitch a buffered tile with top missing") {
       val tiles = 
@@ -43,7 +44,7 @@ class StitcherSpec extends FunSpec with Matchers
           1,   3, 3, 3,   1
         ), 5, 3)
 
-      actual.toArray should be (expected.toArray)
+      actual.toArray() should be (expected.toArray())
     }
   }
 }

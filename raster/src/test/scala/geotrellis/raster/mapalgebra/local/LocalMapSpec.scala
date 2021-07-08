@@ -19,10 +19,12 @@ package geotrellis.raster.mapalgebra.local
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
 import geotrellis.raster.testkit._
 
-class LocalMapSpec extends FunSpec 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class LocalMapSpec extends AnyFunSpec
                       with Matchers 
                       with RasterMatchers 
                       with TileBuilders {
@@ -130,7 +132,7 @@ class LocalMapSpec extends FunSpec
       val r = f(a, 3, 3)
 
       val r2 = r.map { z:Int => z + 1 }
-      val d = r2.toArray
+      val d = r2.toArray()
       d should be (a.map { _ + 1 })
     }
   }

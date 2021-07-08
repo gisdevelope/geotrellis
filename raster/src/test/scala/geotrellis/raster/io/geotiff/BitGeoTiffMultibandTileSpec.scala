@@ -17,23 +17,13 @@
 package geotrellis.raster.io.geotiff
 
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.writer.GeoTiffWriter
-import geotrellis.raster.mapalgebra.local._
-
-import geotrellis.vector.Extent
-
-import geotrellis.proj4._
-
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class BitGeoTiffMultibandTileSpec extends FunSpec
-    with Matchers
-    with BeforeAndAfterAll
-    with RasterMatchers
-    with GeoTiffTestUtils 
-    with TileBuilders {
+class BitGeoTiffMultibandTileSpec extends AnyFunSpec with Matchers with BeforeAndAfterAll with RasterMatchers with GeoTiffTestUtils with TileBuilders {
   def p(s: String, i: String): String = 
     geoTiffPath(s"3bands/bit/3bands-${s}-${i}.tif")
 
@@ -87,7 +77,7 @@ class BitGeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with pixel interleave, striped") {
       val tile =
-        MultibandGeoTiff(p("striped", "pixel")).tile.toArrayTile
+        MultibandGeoTiff(p("striped", "pixel")).tile.toArrayTile()
 
       val actual = tile.combine(_.sum % 2)
       val expected = BitConstantTile(0, tile.cols, tile.rows)
@@ -97,7 +87,7 @@ class BitGeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with pixel interleave, tiled") {
       val tile =
-        MultibandGeoTiff(p("tiled", "pixel")).tile.toArrayTile
+        MultibandGeoTiff(p("tiled", "pixel")).tile.toArrayTile()
 
       val actual = tile.combine(_.sum % 2)
       val expected = BitConstantTile(0, tile.cols, tile.rows)
@@ -107,7 +97,7 @@ class BitGeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with band interleave, striped") {
       val tile =
-        MultibandGeoTiff(p("striped", "band")).tile.toArrayTile
+        MultibandGeoTiff(p("striped", "band")).tile.toArrayTile()
 
       val actual = tile.combine(_.sum % 2)
       val expected = BitConstantTile(0, tile.cols, tile.rows)
@@ -117,7 +107,7 @@ class BitGeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with band interleave, tiled") {
       val tile =
-        MultibandGeoTiff(p("tiled", "band")).tile.toArrayTile
+        MultibandGeoTiff(p("tiled", "band")).tile.toArrayTile()
 
       val actual = tile.combine(_.sum % 2)
       val expected = BitConstantTile(0, tile.cols, tile.rows)

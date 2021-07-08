@@ -1,17 +1,34 @@
+/*
+ * Copyright 2019 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package geotrellis.vector.triangulation
 
-import com.vividsolutions.jts.algorithm.distance.{DistanceToPoint, PointPairDistance}
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.algorithm.distance.{DistanceToPoint, PointPairDistance}
+import org.locationtech.jts.geom.Coordinate
 import geotrellis.vector.Extent
 
 import scala.util.Random
-import org.scalatest._
 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class BoundaryDelaunaySpec extends FunSpec with Matchers {
+class BoundaryDelaunaySpec extends AnyFunSpec with Matchers {
 
   def randInRange(low: Double, high: Double): Double = {
-    val x = Random.nextDouble
+    val x = Random.nextDouble()
     low * (1-x) + high * x
   }
 
@@ -35,7 +52,7 @@ class BoundaryDelaunaySpec extends FunSpec with Matchers {
       val pts = (for ( i <- 1 to 1000 ) yield randomPoint(ex)).toArray
       val dt = DelaunayTriangulation(pts)
       val bdt = BoundaryDelaunay(dt, ex)
-      val bdtTris = bdt.triangleMap.getTriangles.keys.toSet
+      val bdtTris = bdt.triangleMap.getTriangles().keys.toSet
 
       def circumcircleLeavesExtent(tri: Int): Boolean = {
         import dt.halfEdgeTable._
@@ -44,11 +61,11 @@ class BoundaryDelaunaySpec extends FunSpec with Matchers {
         val (radius, center, valid) = circleCenter(getDest(tri), getDest(getNext(tri)), getDest(getNext(getNext(tri))))
         val ppd = new PointPairDistance
 
-        DistanceToPoint.computeDistance(ex.toPolygon.jtsGeom, center, ppd)
+        DistanceToPoint.computeDistance(ex.toPolygon(), center, ppd)
         !valid || ppd.getDistance < radius
       }
 
-      dt.triangleMap.getTriangles.toSeq.forall{ case (idx, tri) => {
+      dt.triangleMap.getTriangles().toSeq.forall{ case (idx, tri) => {
         if (circumcircleLeavesExtent(tri))
           bdtTris.contains(idx)
         else {

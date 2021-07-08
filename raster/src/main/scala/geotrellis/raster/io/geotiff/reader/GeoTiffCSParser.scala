@@ -35,7 +35,6 @@ import CoordinateTransformTypes._
 import geotrellis.proj4.EPSGCSVReader
 import geotrellis.proj4.CSVFileConstants._
 
-import scala.collection.immutable.HashMap
 
 import monocle.syntax.apply._
 
@@ -243,7 +242,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
         gtgp.zone = zone
         gtgp.mapSystem = mapSystem
       }
-      case None => Unit
+      case None => ()
     }
 
     if ((gtgp.mapSystem == MapSys_UTM_North || gtgp.mapSystem == MapSys_UTM_South)
@@ -270,7 +269,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
     gtgp
   }
 
-  private def getPCSData(pcs: Int, gtgp: GeoTiffCSParameters) {
+  private def getPCSData(pcs: Int, gtgp: GeoTiffCSParameters): Unit = {
     val (optDatum, optZone, optMapSystem) = pcsToDatumZoneAndMapSystem(pcs)
 
     val optDatumName = optMapSystem match {
@@ -471,7 +470,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
       projParms(5) = (ProjFalseEastingGeoKey, getValueIfNotNull(projParms(5)))
       projParms(6) = (ProjFalseNorthingGeoKey, getValueIfNotNull(projParms(6)))
     }
-    case _ => Unit
+    case _ => ()
   }
 
   private def getValueIfNotNull(tuple: (Int, Double)) =
@@ -662,7 +661,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
     }
     else angle
 
-  private def setProjectionParameters(gtgp: GeoTiffCSParameters) {
+  private def setProjectionParameters(gtgp: GeoTiffCSParameters): Unit = {
     var originLong, originLat, rectGridAngle = 0.0
     var falseEasting, falseNorthing = 0.0
     var originScale = 1.0
@@ -924,7 +923,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
         gtgp.projectionParameters(5) = (ProjFalseEastingGeoKey, falseEasting)
         gtgp.projectionParameters(6) = (ProjFalseNorthingGeoKey, falseNorthing)
       }
-      case _ => Unit
+      case _ => ()
     }
 
     for (i <- 0 until gtgp.projectionParameters.size) {
@@ -937,7 +936,7 @@ class GeoTiffCSParser(geoKeyDirectory: GeoKeyDirectory) {
           if (gtgp.lengthInMeters != 0.0 && gtgp.lengthInMeters != 1.0) {
             gtgp.projectionParameters(i) = (v._1, v._2 * gtgp.lengthInMeters)
           }
-        case _ => Unit
+        case _ => ()
       }
     }
   }

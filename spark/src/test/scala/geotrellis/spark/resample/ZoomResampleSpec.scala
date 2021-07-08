@@ -24,18 +24,14 @@ import geotrellis.spark.testkit._
 import geotrellis.vector.Extent
 import geotrellis.spark.testkit._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class ZoomResampleMethodsSpec extends FunSpec
-    with TileBuilders
-    with TileLayerRDDBuilders
-    with TestEnvironment {
-
+class ZoomResampleMethodsSpec extends AnyFunSpec with TileBuilders with TileLayerRDDBuilders with TestEnvironment {
 
   describe("Zoom Resample on TileLayerRDD - aspect.tif") {
     val path = "raster/data/aspect.tif"
     val gt = SinglebandGeoTiff(path)
-    val originalRaster = gt.raster.resample(500, 500)
+    val originalRaster = gt.raster.mapTile(_.toArrayTile()).resample(500, 500)
     val (_, rdd) = createTileLayerRDD(originalRaster, 5, 5, gt.crs)
     val md = rdd.metadata
     val overall = md.extent
@@ -44,26 +40,26 @@ class ZoomResampleMethodsSpec extends FunSpec
     val small = Extent(xmin, ymin, xmin + (xmax - xmin) / 5, ymin + (ymax - ymin) / 5)
 
     it("should correctly crop by the rdd extent") {
-      val count = rdd.crop(overall).count
+      val count = rdd.crop(overall).count()
       count should be (25)
     }
 
     it("should correctly increase the number of tiles by 2 when going up one level") {
       val resampled = rdd.resampleToZoom(5, 6)
-      val count = resampled.count
-      count should be (rdd.count * 4)
+      val count = resampled.count()
+      count should be (rdd.count() * 4)
 
-      val gridBounds = rdd.metadata.bounds.get.toGridBounds
-      val resampledGridBounds = resampled.metadata.bounds.get.toGridBounds
+      val gridBounds = rdd.metadata.bounds.get.toGridBounds()
+      val resampledGridBounds = resampled.metadata.bounds.get.toGridBounds()
 
-      resampledGridBounds.sizeLong should be (gridBounds.sizeLong * 4)
+      resampledGridBounds.size should be (gridBounds.size * 4)
     }
   }
 
   describe("Zoom Resample on MultibandTileLayerRDD - aspect.tif") {
     val path = "raster/data/aspect.tif"
     val gt = MultibandGeoTiff(path)
-    val originalRaster = gt.raster.resample(500, 500)
+    val originalRaster = gt.raster.mapTile(_.toArrayTile()).resample(500, 500)
     val rdd = createMultibandTileLayerRDD(sc, originalRaster, TileLayout(5, 5, 100, 100), gt.crs)
     val md = rdd.metadata
     val overall = md.extent
@@ -72,19 +68,19 @@ class ZoomResampleMethodsSpec extends FunSpec
     val small = Extent(xmin, ymin, xmin + (xmax - xmin) / 5, ymin + (ymax - ymin) / 5)
 
     it("should correctly crop by the rdd extent") {
-      val count = rdd.crop(overall).count
+      val count = rdd.crop(overall).count()
       count should be (25)
     }
 
     it("should correctly increase the number of tiles by 2 when going up one level") {
       val resampled = rdd.resampleToZoom(5, 6)
-      val count = resampled.count
-      count should be (rdd.count * 4)
+      val count = resampled.count()
+      count should be (rdd.count() * 4)
 
-      val gridBounds = rdd.metadata.bounds.get.toGridBounds
-      val resampledGridBounds = resampled.metadata.bounds.get.toGridBounds
+      val gridBounds = rdd.metadata.bounds.get.toGridBounds()
+      val resampledGridBounds = resampled.metadata.bounds.get.toGridBounds()
 
-      resampledGridBounds.sizeLong should be (gridBounds.sizeLong * 4)
+      resampledGridBounds.size should be (gridBounds.size * 4)
     }
   }
 
@@ -112,9 +108,9 @@ class ZoomResampleMethodsSpec extends FunSpec
         )
 
       val resampled = layer.resampleToZoom(1, 2, GridBounds(1, 1, 1, 1))
-      val count = resampled.count
+      val count = resampled.count()
       count should be (1)
-      val result = resampled.collect.head._2
+      val result = resampled.collect().head._2
 
       result.foreach { z =>
         z should be (6)
@@ -147,9 +143,9 @@ class ZoomResampleMethodsSpec extends FunSpec
         )
 
       val resampled = layer.resampleToZoom(1, 2, GridBounds(1, 1, 1, 1))
-      val count = resampled.count
+      val count = resampled.count()
       count should be (1)
-      val result = resampled.collect.head._2
+      val result = resampled.collect().head._2
 
       result.foreach { z =>
         z should be (Array(6, 6, 6))

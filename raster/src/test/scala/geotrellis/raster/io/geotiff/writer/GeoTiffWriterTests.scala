@@ -17,20 +17,20 @@
 package geotrellis.raster.io.geotiff.writer
 
 import geotrellis.raster.io.geotiff._
-import geotrellis.raster.io.geotiff.compression._
 import geotrellis.raster.testkit._
 import geotrellis.util._
 
-import org.scalatest._
-
 import java.io._
 
-class GeoTiffWriterTests extends FunSuite
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuite
+
+class GeoTiffWriterTests extends AnyFunSuite
     with BeforeAndAfterAll
     with RasterMatchers
     with GeoTiffTestUtils {
 
-  override def afterAll = purge
+  override def afterAll() = purge
 
   test("Writing out an LZW raster from a streaming reader, and compressed (#2177)") {
     /** This issue arose from immediately writing a compressed GeoTiff, without ever uncompressing it.
@@ -51,7 +51,7 @@ class GeoTiffWriterTests extends FunSuite
 
     val gt2 = MultibandGeoTiff.streaming(reader)
     val gt3 = MultibandGeoTiff(p)
-    val gt1 = gt3.tile.toArrayTile
+    val gt1 = gt3.tile.toArrayTile()
 
       withClue("Assumption failed: Reading GeoTiff two ways didn't match") {
       assertEqual(gt2.tile, gt1)

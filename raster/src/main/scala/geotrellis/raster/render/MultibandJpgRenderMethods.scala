@@ -19,7 +19,6 @@ package geotrellis.raster.render
 import geotrellis.raster._
 import geotrellis.util.MethodExtensions
 
-import spire.syntax.cfor._
 
 trait MultibandJpgRenderMethods extends MethodExtensions[MultibandTile] {
 
@@ -33,6 +32,6 @@ trait MultibandJpgRenderMethods extends MethodExtensions[MultibandTile] {
     * with integer data whose values range from 0 to 255.
     */
   def renderJpg(): Jpg = {
-    self.color().renderJpg
+    self.color().renderJpg()
   }
 }

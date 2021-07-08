@@ -16,20 +16,14 @@
 
 package geotrellis.spark.util
 
-import geotrellis.spark._
-import geotrellis.proj4._
-import geotrellis.spark.tiling._
-import geotrellis.spark.io.hadoop._
-import geotrellis.spark.TileLayerRDD
-import geotrellis.spark.testkit.testfiles._
 import geotrellis.spark.testkit._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 class OptimusPrime(val prime: Int) extends Function1[Int, Int] {
   def apply(x: Int): Int = prime + x
 }
-class KryoClosureSpec extends FunSpec with TestEnvironment {
+class KryoClosureSpec extends AnyFunSpec with TestEnvironment {
   val transformer = new OptimusPrime(7)
   val numbers = Array.fill(10)(10)
 
@@ -38,13 +32,13 @@ class KryoClosureSpec extends FunSpec with TestEnvironment {
 
     it("should be better then Java serialization") {
       intercept[org.apache.spark.SparkException] {
-        rdd.map(transformer).collect
+        rdd.map(transformer).collect()
       }
     }
 
     it("should be totally awesome at serialization"){
       val out = rdd.map(KryoClosure(transformer))
-      out.collect should be (Array.fill(10)(17))
+      out.collect() should be (Array.fill(10)(17))
     }
   }
 }

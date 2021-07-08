@@ -24,17 +24,16 @@ import geotrellis.raster.io.geotiff.tags.codes.ColorSpace
 import geotrellis.raster.render.{ColorRamps, IndexedColorMap}
 import geotrellis.raster.testkit._
 import geotrellis.vector.Extent
-import org.scalatest._
+
 import java.io._
 
-class GeoTiffWriterSpec extends FunSpec
-    with Matchers
-    with BeforeAndAfterAll
-    with RasterMatchers
-    with TileBuilders
-    with GeoTiffTestUtils {
+import org.scalatest.{BeforeAndAfterAll, Inspectors}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-  override def afterAll = purge
+class GeoTiffWriterSpec extends AnyFunSpec with Matchers with BeforeAndAfterAll with RasterMatchers with TileBuilders with GeoTiffTestUtils {
+
+  override def afterAll() = purge
 
   private val testCRS = CRS.fromName("EPSG:3857")
   private val testExtent = Extent(100.0, 400.0, 120.0, 420.0)
@@ -148,6 +147,16 @@ class GeoTiffWriterSpec extends FunSpec
       actualCRS.toProj4String should be (geoTiff.crs.toProj4String)
     }
 
+    it ("should write web mercator with no epsg code correctly") {
+      val geoTiff = MultibandGeoTiff(geoTiffPath("ndvi-web-mercator.tif"))
+
+      addToPurge(path)
+      GeoTiff(geoTiff.raster, CRS.fromString(geoTiff.crs.toProj4String)).write(path)
+      val actualCRS = SinglebandGeoTiff(path).crs
+
+      actualCRS.toProj4String should be (geoTiff.crs.toProj4String)
+    }
+
     it("should write floating point rasters correctly") {
       val t = DoubleArrayTile(Array(11.0, 22.0, 33.0, 44.0), 2, 2)
 
@@ -204,14 +213,14 @@ class GeoTiffWriterSpec extends FunSpec
     it ("should read write multibandraster with compression correctly") {
       val geoTiff = {
         val gt = MultibandGeoTiff(geoTiffPath("3bands/int32/3bands-striped-pixel.tif"))
-        MultibandGeoTiff(Raster(gt.raster.tile.toArrayTile, gt.raster.extent), gt.crs, options = GeoTiffOptions(compression.DeflateCompression))
+        MultibandGeoTiff(Raster(gt.raster.tile.toArrayTile(), gt.raster.extent), gt.crs, options = GeoTiffOptions(compression.DeflateCompression))
       }
 
       GeoTiffWriter.write(geoTiff, path)
 
       addToPurge(path)
 
-      val tags = TiffTags(path)
+      val tags = TiffTags.read(path)
       tags.compression should be (geotrellis.raster.io.geotiff.tags.codes.CompressionType.ZLibCoded)
 
       val gt = MultibandGeoTiff(path)
@@ -247,7 +256,7 @@ class GeoTiffWriterSpec extends FunSpec
       gt.crs should equal (geoTiff.crs)
       gt.tile.bandCount should equal (tile.bandCount)
       for(i <- 0 until gt.tile.bandCount) {
-        val actualBand = gt.band(i)
+        val actualBand = gt.tile.band(i)
         val expectedBand = tile.band(i)
 
         assertEqual(actualBand, expectedBand)
@@ -495,12 +504,12 @@ class GeoTiffWriterSpec extends FunSpec
       addToPurge(path)
 
       reread.options.colorSpace should be (ColorSpace.Palette)
-      reread.options.colorMap should be('defined)
+      reread.options.colorMap should be(Symbol("defined"))
 
       val p1 = reread.options.colorMap.get.colors
       val p2 = indexed.options.colorMap.get.colors
 
-      Inspectors.forEvery(p1.zip(p2)) { case (c1, c2) ⇒
+      Inspectors.forEvery(p1.zip(p2)) { case (c1, c2) =>
         c1 should equal (c2)
       }
     }
@@ -516,7 +525,7 @@ class GeoTiffWriterSpec extends FunSpec
       val p1 = reread.options.colorMap.get.colors
       val p2 = base.options.colorMap.get.colors
 
-      Inspectors.forEvery(p1.zip(p2)) { case (c1, c2) ⇒
+      Inspectors.forEvery(p1.zip(p2)) { case (c1, c2) =>
         c1 should equal (c2)
       }
     }
@@ -525,7 +534,7 @@ class GeoTiffWriterSpec extends FunSpec
       val base = SinglebandGeoTiff(geoTiffPath("colormap.tif"))
       val illegal = Seq(FloatCellType, DoubleCellType, IntCellType)
 
-      Inspectors.forEvery(illegal) { cellType ⇒
+      Inspectors.forEvery(illegal) { cellType =>
         val naughty = base.copy(tile = base.tile.convert(cellType))
         intercept[IncompatibleGeoTiffOptionsException] {
           GeoTiffWriter.write(naughty, path)

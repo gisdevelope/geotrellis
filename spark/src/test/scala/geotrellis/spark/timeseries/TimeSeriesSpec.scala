@@ -18,26 +18,24 @@ package geotrellis.spark.timeseries
 
 import geotrellis.proj4.LatLng
 import geotrellis.raster._
+import geotrellis.layer._
 import geotrellis.spark._
 import geotrellis.spark.testkit.TestEnvironment
-import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
 
-import org.scalatest._
-
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 object TimeSeriesSpecFunctions {
 
   def projection(tile: Tile): Set[Int] =
-    tile.toArray.toSet.filter(_ > 0)
+    tile.toArray().toSet.filter(_ > 0)
 
   def reduction(left: Set[Int], right: Set[Int]): Set[Int] =
     left ++ right
 }
 
-class TimeSeriesSpec extends FunSpec
-    with Matchers
-    with TestEnvironment {
+class TimeSeriesSpec extends AnyFunSpec with Matchers with TestEnvironment {
 
   val rdd = {
     val tile1 = IntArrayTile(Array.fill[Int](25)(1), 5, 5)
@@ -45,7 +43,7 @@ class TimeSeriesSpec extends FunSpec
     val tile3 = IntArrayTile(Array.fill[Int](25)(3), 5, 5)
     val tile4 = IntArrayTile(Array.fill[Int](25)(4), 5, 5)
     val extent = Extent(0, 0, 10, 5)
-    val gridExtent = GridExtent(extent, 1, 1) // 10×5 pixels
+    val gridExtent = GridExtent[Long](extent, CellSize(1, 1)) // 10×5 pixels
     val layoutDefinition = LayoutDefinition(gridExtent, 10, 5)
     val bounds = Bounds(SpaceTimeKey(0, 0, 0), SpaceTimeKey(1, 0, 1))
     val tileLayerMetadata = TileLayerMetadata(

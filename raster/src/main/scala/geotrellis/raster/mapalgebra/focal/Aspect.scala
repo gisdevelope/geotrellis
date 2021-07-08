@@ -18,7 +18,6 @@ package geotrellis.raster.mapalgebra.focal
 
 import geotrellis.raster._
 import geotrellis.raster.mapalgebra.focal.hillshade.{SurfacePoint, SurfacePointCalculation}
-import geotrellis.raster.mapalgebra.focal.Angles._
 
 /** Calculates the aspect of each cell in a raster.
   *
@@ -42,12 +41,12 @@ import geotrellis.raster.mapalgebra.focal.Angles._
   */
 object Aspect {
 
-  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds], cs: CellSize, target: TargetCell = TargetCell.All): Tile = {
+  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds[Int]], cs: CellSize, target: TargetCell = TargetCell.All): Tile = {
     new SurfacePointCalculation[Tile](tile, n, bounds, cs, target)
       with DoubleArrayTileResult
     {
-      def setValue(x: Int, y: Int, s: SurfacePoint) {
-        resultTile.setDouble(x, y, s.aspectAzimuth)
+      def setValue(x: Int, y: Int, s: SurfacePoint): Unit = {
+        resultTile.setDouble(x, y, s.aspectAzimuth())
       }
     }
   }.execute()

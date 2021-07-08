@@ -16,23 +16,21 @@
 
 package geotrellis.spark.mask
 
+import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.raster.testkit._
+import geotrellis.layer.mask.Mask
 import geotrellis.spark._
 import geotrellis.spark.testkit.testfiles._
 import geotrellis.spark.testkit._
-import geotrellis.vector._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 import scala.util.Random
 
-class TileRDDMaskMethodsSpec extends FunSpec
-    with Matchers
-    with TestEnvironment
-    with TestFiles
-    with TileLayerRDDBuilders
-    with RasterMatchers {
+class TileRDDMaskMethodsSpec extends AnyFunSpec with Matchers with TestEnvironment with TestFiles with TileLayerRDDBuilders with RasterMatchers {
+
   describe("TileLayerRDDMask") {
     it("should properly mask a float32 user defined nodata layer") {
       val arr = (1 to (6*4)).map(_.toFloat).toArray
@@ -48,7 +46,7 @@ class TileRDDMaskMethodsSpec extends FunSpec
       val mask = Extent(xmin + dx, ymin, xmax, ymin + dy)
 
       val n = -1.1f
-      assertEqual(layer.mask(mask.toPolygon).stitch.tile,
+      assertEqual(layer.mask(mask.toPolygon()).stitch().tile,
         FloatArrayTile(
           Array(
             n, n, 15, 16, 17, n,
@@ -72,7 +70,7 @@ class TileRDDMaskMethodsSpec extends FunSpec
       val mask = Extent(xmin + dx, ymin, xmax, ymin + dy)
 
       val n = -1.1f
-      assertEqual(layer.mask(mask.toPolygon, options = Mask.Options(filterEmptyTiles = false)).stitch.tile,
+      assertEqual(layer.mask(mask.toPolygon(), options = Mask.Options(filterEmptyTiles = false)).stitch().tile,
         FloatArrayTile(
           Array(
             n, n, n, n, n, n,
@@ -102,7 +100,7 @@ class TileRDDMaskMethodsSpec extends FunSpec
 
       val n = -1.1f
       assertEqual(
-        layer.mask(mask.toPolygon).stitch.tile.band(0),
+        layer.mask(mask.toPolygon()).stitch().tile.band(0),
         FloatArrayTile(
           Array(
             n, n, 15, 16, 17, n,
@@ -112,7 +110,7 @@ class TileRDDMaskMethodsSpec extends FunSpec
       )
 
       assertEqual(
-        layer.mask(mask.toPolygon).stitch.tile.band(1),
+        layer.mask(mask.toPolygon()).stitch().tile.band(1),
         FloatArrayTile(
           Array(
             n, n, 150, 160, 170, 180,
@@ -125,7 +123,7 @@ class TileRDDMaskMethodsSpec extends FunSpec
 
   describe("masking against more polygons") {
     val rdd = AllOnesTestFile
-    val tile = rdd.stitch.tile
+    val tile = rdd.stitch().tile
     val worldExt = rdd.metadata.extent
     val height = worldExt.height.toInt
     val width = worldExt.width.toInt
@@ -133,8 +131,8 @@ class TileRDDMaskMethodsSpec extends FunSpec
     def inMirror(bound: Int): Int = inRange(-bound to bound)
     def inRange(bounds: Range): Int = Random.nextInt(bounds.max - bounds.min) + bounds.min
 
-    def triangle(size: Int, dx: Int, dy: Int): Line =
-      Line(Seq[(Double, Double)]((0, 0), (size, 0), (size, size), (0, 0))
+    def triangle(size: Int, dx: Int, dy: Int): LineString =
+      LineString(Seq[(Double, Double)]((0, 0), (size, 0), (size, size), (0, 0))
            .map { case (x, y) => (x + dx, y + dy) })
 
     def randomPolygons(number: Int = 50)(maxWidth: Int, maxHeight: Int): Seq[Polygon] = {
@@ -156,23 +154,23 @@ class TileRDDMaskMethodsSpec extends FunSpec
     it ("should be masked by random polygons") {
       randomPolygons()(width, height) foreach { poly =>
         if(poly.isValid) {
-          val masked = rdd.mask(poly, options = opts).stitch
+          val masked = rdd.mask(poly, options = opts).stitch()
           val expected = tile.mask(worldExt, poly)
-          masked.toArray() shouldEqual expected.toArray()
+          masked.tile.toArray() shouldEqual expected.toArray()
         }
       }
     }
 
     it ("should be masked by complex polygons") {
       val cases = Seq(
-        Polygon(Line((-5, -16), (44, -16), (44, 33), (-5, -16)), Line((19, 0), (35, 0), (35, 16), (19, 0))),
-        Polygon(Line((-84, -41), (40, -41), (40, 83), (-84, -41)), Line((-22, 0), (19, 0), (19, 41), (-22, 0))),
-        Polygon(Line((-7, 0), (28, 0), (28, 35), (-7, 0)), Line((10, 11), (21, 11), (21, 22), (10, 11)))
+        Polygon(LineString(Seq[(Double,Double)]((-5, -16), (44, -16), (44, 33), (-5, -16))), LineString(Seq[(Double,Double)]((19, 0), (35, 0), (35, 16), (19, 0)))),
+        Polygon(LineString(Seq[(Double,Double)]((-84, -41), (40, -41), (40, 83), (-84, -41))), LineString(Seq[(Double,Double)]((-22, 0), (19, 0), (19, 41), (-22, 0)))),
+        Polygon(LineString(Seq[(Double,Double)]((-7, 0), (28, 0), (28, 35), (-7, 0))), LineString(Seq[(Double,Double)]((10, 11), (21, 11), (21, 22), (10, 11))))
       )
       cases foreach { poly =>
-        val masked = rdd.mask(poly, options = opts).stitch
+        val masked = rdd.mask(poly, options = opts).stitch()
         val expected = tile.mask(worldExt, poly)
-        masked.toArray() shouldEqual expected.toArray()
+        masked.tile.toArray() shouldEqual expected.toArray()
       }
     }
 
@@ -183,33 +181,39 @@ class TileRDDMaskMethodsSpec extends FunSpec
       }
       multipolygons foreach { multipoly =>
         if(multipoly.isValid) {
-          val masked = rdd.mask(multipoly, options = opts).stitch
+          val masked = rdd.mask(multipoly, options = opts).stitch()
           val expected = tile.mask(worldExt, multipoly)
-          masked.toArray() shouldEqual expected.toArray()
+          masked.tile.toArray() shouldEqual expected.toArray()
         }
       }
     }
 
     it ("should be masked by complex multipolygons") {
       val cases = Seq(
-        MultiPolygon(Polygon(Line((29, 15), (110, 15), (110, 96), (29, 15)), Line((69, 42), (96, 42), (96, 69), (69, 42))),
-          Polygon(Line((-77, -78), (46, -78), (46, 45), (-77, -78)), Line((-16, -37), (25, -37), (25, 4), (-16, -37)))),
-        MultiPolygon(Polygon(Line((-41, -17), (0, -17), (0, 24), (-41, -17)), Line((-21, -4), (-8, -4), (-8, 9), (-21, -4))),
-          Polygon(Line((-83, -76), (-13, -76), (-13, -6), (-83, -76)), Line((-48, -53), (-25, -53), (-25, -30), (-48, -53))))
+        MultiPolygon(
+          Polygon(LineString(Seq[(Double,Double)]((29, 15), (110, 15), (110, 96), (29, 15))),
+                  LineString(Seq[(Double,Double)]((69, 42), (96, 42), (96, 69), (69, 42)))),
+          Polygon(LineString(Seq[(Double,Double)]((-77, -78), (46, -78), (46, 45), (-77, -78))),
+                  LineString(Seq[(Double,Double)]((-16, -37), (25, -37), (25, 4), (-16, -37))))),
+        MultiPolygon(
+          Polygon(LineString(Seq[(Double,Double)]((-41, -17), (0, -17), (0, 24), (-41, -17))),
+                  LineString(Seq[(Double,Double)]((-21, -4), (-8, -4), (-8, 9), (-21, -4)))),
+          Polygon(LineString(Seq[(Double,Double)]((-83, -76), (-13, -76), (-13, -6), (-83, -76))),
+                  LineString(Seq[(Double,Double)]((-48, -53), (-25, -53), (-25, -30), (-48, -53)))))
       )
       cases foreach { multipoly =>
-        val masked = rdd.mask(multipoly, options = opts).stitch
+        val masked = rdd.mask(multipoly, options = opts).stitch()
         val expected = tile.mask(worldExt, multipoly)
-        masked.toArray() shouldEqual expected.toArray()
+        masked.tile.toArray() shouldEqual expected.toArray()
       }
     }
 
     it ("should be masked by random extents") {
-      val extents = randomPolygons()(width, height).map(_.envelope)
+      val extents = randomPolygons()(width, height).map(_.extent)
       extents foreach { extent =>
-        val masked = rdd.mask(extent, options = opts).stitch
+        val masked = rdd.mask(extent, options = opts).stitch()
         val expected = tile.mask(worldExt, extent)
-        masked.toArray() shouldEqual expected.toArray()
+        masked.tile.toArray() shouldEqual expected.toArray()
       }
     }
   }

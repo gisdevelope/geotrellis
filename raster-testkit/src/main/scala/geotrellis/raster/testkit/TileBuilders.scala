@@ -163,6 +163,25 @@ trait TileBuilders {
     CompositeTile(tiles.flatten.map(a => createTile(a, pixelCols, pixelRows)), layout)
   }
 
+  private
+  lazy val rng = new scala.util.Random(42)
+
+  /** Return a copy of the given tile with `num` cells, at random indexes, replaced by the NoData value. */
+  def injectNoData(num: Int)(t: Tile): Tile = {
+    val indexes = List.tabulate(t.size)(identity)
+    val targeted = rng.shuffle(indexes).take(num)
+    def filter(c: Int, r: Int) = targeted.contains(r * t.cols + c)
+
+    val injected = if(t.cellType.isFloatingPoint) {
+      t.mapDouble((c, r, v) => (if(filter(c,r)) doubleNODATA else v): Double)
+    }
+    else {
+      t.map((c, r, v) => if(filter(c, r)) NODATA else v)
+    }
+
+    injected
+  }
+
   /**
    * 9x10 raster of 90 numbers between 1 - 100 in random order.
    */
@@ -274,7 +293,7 @@ trait TileBuilders {
     ArrayTile(Array.fill(100)(n), 10, 10)
 
   /* prints out a raster to console */
-  def printR(tile: Tile) {
+  def printR(tile: Tile): Unit = {
     for(row <- 0 until tile.rows) {
       for(col <- 0 until tile.cols) {
         val v = tile.get(col, row)
@@ -286,8 +305,8 @@ trait TileBuilders {
         val pad = " " * math.max(6 - s.length, 0)
         print(s"${pad + s}")
       }
-      println
+      println()
     }
-    println
+    println()
   }
 }

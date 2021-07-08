@@ -16,18 +16,12 @@
 
 package geotrellis.geotools
 
-import geotrellis.raster._
-import geotrellis.vector._
-
 import org.geotools.data.shapefile._
-import org.scalatest._
 
-import scala.collection.JavaConverters._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-
-class SimpleFeatureToFeatureSpec
-    extends FunSpec
-    with Matchers {
+class SimpleFeatureToFeatureSpec extends AnyFunSpec with Matchers {
 
   val shapefiles : List[String] = List(
     "geotools/src/test/resources/timepyramid/timepyramid/2/2.shp",

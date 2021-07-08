@@ -16,15 +16,13 @@
 
 package geotrellis.raster.vectorize
 
-import com.vividsolutions.jts.{geom => jts}
 import geotrellis.raster._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
-import org.scalatest._
 
-class VectorizeSpec extends FunSpec
-                      with RasterMatchers with TestFiles
-                      with TileBuilders {
+import org.scalatest.funspec.AnyFunSpec
+
+class VectorizeSpec extends AnyFunSpec with RasterMatchers with TestFiles with TileBuilders {
   val cw = 1
   val ch = 10
   val xmin = 0
@@ -38,7 +36,7 @@ class VectorizeSpec extends FunSpec
   def br(col: Int, row: Int) = (d(col + 1), (d(row) + 1)* -10)    // Bottom right
 
   def assertPolygon(polygon: Polygon, expectedCoords: List[(Double, Double)]) = {
-    assertCoords(polygon.jtsGeom.getCoordinates.map(c => (c.x, c.y)), expectedCoords)
+    assertCoords(polygon.getCoordinates.map(c => (c.x, c.y)), expectedCoords)
   }
 
   def assertCoords(coordinates: Seq[(Double, Double)], expectedCoords: List[(Double, Double)]) = {
@@ -95,7 +93,7 @@ class VectorizeSpec extends FunSpec
 
       ones.map { polygon =>
         polygon.data should be (1)
-        val coordinates = polygon.geom.jtsGeom.getCoordinates.map(c => (c.x, c.y))
+        val coordinates = polygon.geom.getCoordinates.map(c => (c.x, c.y))
         coordinates.length should be (5)
         coordinates.map { c =>
           withClue (s"$c in expected coordinate set: ") { onesCoords.contains(c) should be (true) }
@@ -136,8 +134,8 @@ class VectorizeSpec extends FunSpec
       val holes = poly.holes
       holes.length should be (1)
       val hole = holes(0)
-      assertCoords(shell.jtsGeom.getCoordinates.map { c => (c.x, c.y) }, onesCoords)
-      assertCoords(hole.jtsGeom.getCoordinates.map { c => (c.x, c.y) }, holeCoords)
+      assertCoords(shell.getCoordinates.map { c => (c.x, c.y) }, onesCoords)
+      assertCoords(hole.getCoordinates.map { c => (c.x, c.y) }, holeCoords)
     }
 
     it("should vectorize an off shape.") {
@@ -241,8 +239,8 @@ class VectorizeSpec extends FunSpec
       val holes = poly.holes
       holes.length should be (1)
       val hole = holes(0)
-      assertCoords(shell.jtsGeom.getCoordinates.map { c => (c.x, c.y) }, shellCoords)
-      assertCoords(hole.jtsGeom.getCoordinates.map { c => (c.x, c.y) }, holeCoords)
+      assertCoords(shell.getCoordinates.map { c => (c.x, c.y) }, shellCoords)
+      assertCoords(hole.getCoordinates.map { c => (c.x, c.y) }, holeCoords)
     }
 
     it("should vectorize an shape with a hole.") {
@@ -287,11 +285,11 @@ class VectorizeSpec extends FunSpec
       val polygon = ones(0)
 
       polygon.data should be (1)
-      val shellCoordinates = polygon.geom.jtsGeom.getExteriorRing.getCoordinates.map(c => (c.x, c.y))
+      val shellCoordinates = polygon.geom.getExteriorRing.getCoordinates.map(c => (c.x, c.y))
       assertCoords(shellCoordinates, expectedShellCoords)
 
-      polygon.geom.jtsGeom.getNumInteriorRing() should be (1)
-      val holeCoordinates = polygon.geom.jtsGeom.getInteriorRingN(0).getCoordinates.map(c => (c.x, c.y))
+      polygon.geom.getNumInteriorRing() should be (1)
+      val holeCoordinates = polygon.geom.getInteriorRingN(0).getCoordinates.map(c => (c.x, c.y))
       assertCoords(holeCoordinates, expectedHoleCoords)
     }
 
@@ -348,20 +346,20 @@ class VectorizeSpec extends FunSpec
       val polygon = ones(0)
 
       polygon.data should be (1)
-      val shellCoordinates = polygon.geom.jtsGeom.getExteriorRing.getCoordinates.map(c => (c.x, c.y))
+      val shellCoordinates = polygon.geom.getExteriorRing.getCoordinates.map(c => (c.x, c.y))
       assertCoords(shellCoordinates, expectedShellCoords)
 
-      polygon.geom.jtsGeom.getNumInteriorRing() should be (2)
+      polygon.geom.getNumInteriorRing() should be (2)
 
       val holes =
         Vector(0, 1)
-          .map { i => polygon.geom.jtsGeom.getInteriorRingN(i).getCoordinates }
+          .map { i => polygon.geom.getInteriorRingN(i).getCoordinates }
           .sortBy { coords => coords.map(c => c.x).min }
           .map(_.map(c => (c.x, c.y)))
 
-      val holeCoordinates = polygon.geom.jtsGeom.getInteriorRingN(1).getCoordinates.map(c => (c.x, c.y))
+      val holeCoordinates = polygon.geom.getInteriorRingN(1).getCoordinates.map(c => (c.x, c.y))
       assertCoords(holes(0), expectedHoleCoords)
-      val holeCoordinates2 = polygon.geom.jtsGeom.getInteriorRingN(0).getCoordinates.map(c => (c.x, c.y))
+      val holeCoordinates2 = polygon.geom.getInteriorRingN(0).getCoordinates.map(c => (c.x, c.y))
       assertCoords(holes(1), expectedHoleCoords2)
     }
 
@@ -438,7 +436,7 @@ class VectorizeSpec extends FunSpec
       toVector.length should be (1)
       val geom = toVector.head.geom
 
-      val coordinates = geom.jtsGeom.getCoordinates
+      val coordinates = geom.getCoordinates
 
       coordinates.length should be (5)
 
@@ -472,7 +470,7 @@ class VectorizeSpec extends FunSpec
       toVector.length should be (1)
       val geom = toVector.head.geom
 
-      val coordinates = geom.jtsGeom.getCoordinates
+      val coordinates = geom.getCoordinates
 
       coordinates.length should be (7)
 
@@ -514,7 +512,7 @@ class VectorizeSpec extends FunSpec
       toVector.length should be (1)
       val geom = toVector.head.geom
 
-      val coordinates = geom.jtsGeom.getCoordinates
+      val coordinates = geom.getCoordinates
 
       coordinates.length should be (7)
 
@@ -557,6 +555,74 @@ class VectorizeSpec extends FunSpec
       val toVector = r.toVector(extent)
 
       toVector.length should be (4)
+    }
+
+    it("should work for case when class is a single pixel in lower right") {
+      val bitTile = BitArrayTile.empty(3,2)
+      bitTile.set(2, 1, 1)
+      val features = bitTile.toVector(Extent(0,0,3,2))
+
+      def sameAs(p1: Polygon)(p2: Polygon) = p1.covers(p2) && p2.covers(p1)
+
+      assert(features.map(_.geom).exists(sameAs(Polygon(Seq[(Double,Double)]((2,1),(3,1),(3,2),(0,2),(0,0),(2,0),(2,1))))))
+      assert(features.map(_.geom).exists(sameAs(Polygon(Seq[(Double,Double)]((2,1),(3,1),(3,0),(2,0),(2,1))))))
+    }
+
+    it("should handle a user-submitted problem tile"){
+      val contents = Array(
+        0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,
+        0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,
+        1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,
+        1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,0,1,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,
+        0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,
+        1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+        1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,
+        0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,
+        0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,1,1,1,1,1,1,
+        0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,1,1,0,
+        1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,
+        1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+        1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,
+        0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,
+        0,1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,
+        1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,
+        1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,
+        1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,
+        0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,
+        1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,
+        1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,
+        1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,1,1,1,1,1,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+        0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,
+        0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,
+        0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,0
+      )
+      val (cols, rows) = (44, 44)
+
+      val extent = Extent(0, -rows, cols, 0)
+      val r = ArrayTile(contents, cols, rows)
+
+      val toVector = r.toVector(extent)
+
+      toVector.length should be (15)
     }
   }
 

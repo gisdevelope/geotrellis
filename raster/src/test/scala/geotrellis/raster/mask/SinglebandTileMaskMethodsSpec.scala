@@ -20,17 +20,14 @@ import geotrellis.raster.testkit._
 import geotrellis.raster._
 import geotrellis.raster.rasterize.Rasterizer.Options
 import geotrellis.vector._
-import geotrellis.vector.io._
 
-import org.scalatest._
-
-import scala.math.min
 import scala.util.Random
 
-class SinglebandTileMaskMethodsSpec extends FunSpec
-                  with Matchers
-                  with RasterMatchers
-                  with TileBuilders {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class SinglebandTileMaskMethodsSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("singleband tile mask") {
     it("should work with integers") {
       val r1 = createTile(
@@ -90,12 +87,12 @@ class SinglebandTileMaskMethodsSpec extends FunSpec
       val extent = Extent(0, 0, 4, 4)
       val re = RasterExtent(tile, extent)
 
-      val mask = Polygon(Line( (0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5), (0.5, 0.5)))
+      val mask = Polygon(LineString((0.5, 0.5), (0.5, 3.5), (3.5, 3.5), (3.5, 0.5), (0.5, 0.5)))
       val masked = tile.mask(extent, mask, Options(true, PixelIsArea))
 
       masked.foreach { (x, y, v) =>
         val expected =
-          if (mask.intersects(re.gridToMap(x, y))) tile.get(x, y)
+          if (mask.intersects(Point(re.gridToMap(x, y)))) tile.get(x, y)
           else NODATA
         v should be(expected)
       }
@@ -121,16 +118,16 @@ class SinglebandTileMaskMethodsSpec extends FunSpec
        *
        * TODO: Look into whether this is actually expected within JTS and possibly report.
        */
-      def square(size: Int, dx: Double, dy: Double): Line =
-        Line(Seq((-size, -size), (size, -size), (size, size), (-size, size), (-size, -size))
+      def square(size: Int, dx: Double, dy: Double): LineString =
+        LineString(Seq((-size, -size), (size, -size), (size, size), (-size, size), (-size, -size))
              .map { case (x, y) => (x + dx, y + dy) })
 
       def check(mask: Polygon): Unit =
         tile.mask(worldExt, mask).foreach { (x, y, v) =>
           val expected =
-            if (mask.intersects(re.gridToMap(x, y))) tile.get(x, y)
+            if (mask.intersects(Point(re.gridToMap(x, y)))) tile.get(x, y)
             else NODATA
-          withClue(s"\n\nMASK: ${mask.toGeoJson}\nRASTEREXT $re\n\n") {
+          withClue(s"\n\nMASK: ${mask.toGeoJson()}\nRASTEREXT $re\n\n") {
             v should be(expected)
           }
         }

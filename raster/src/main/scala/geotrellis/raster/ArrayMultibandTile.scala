@@ -16,8 +16,6 @@
 
 package geotrellis.raster
 
-import geotrellis.raster.summary._
-import geotrellis.vector.Extent
 
 import spire.syntax.cfor._
 
@@ -109,7 +107,7 @@ class ArrayMultibandTile(_bands: Array[Tile]) extends MultibandTile with MacroMu
     *
     * @return  The object on which the method was invoked
     */
-  def toArrayTile = this
+  def toArrayTile() = this
 
   /**
     * Retrieve one band of an [[ArrayMultibandTile]].
@@ -512,4 +510,6 @@ class ArrayMultibandTile(_bands: Array[Tile]) extends MultibandTile with MacroMu
     case _ =>
       false
   }
+
+  override def toString: String = s"ArrayMultibandTile($cols,$rows,$bandCount,$cellType)"
 }

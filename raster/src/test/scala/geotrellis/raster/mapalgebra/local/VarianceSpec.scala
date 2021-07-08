@@ -19,11 +19,12 @@ package geotrellis.raster.mapalgebra.local
 import geotrellis.raster._
 import geotrellis.raster.testkit._
 
-import org.scalatest._
-
 import spire.syntax.cfor._
 
-class VarianceSpec extends FunSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class VarianceSpec extends AnyFunSpec
     with Matchers
     with RasterMatchers
     with TileBuilders {
@@ -70,7 +71,7 @@ class VarianceSpec extends FunSpec
 
       val seq = Seq(r1, r2, r3, r4)
 
-      val res = seq.localVariance
+      val res = seq.localVariance()
 
       cfor(0)(_ < rows, _ + 1) { row =>
         cfor(0)(_ < cols, _ + 1) { col =>
@@ -123,7 +124,7 @@ class VarianceSpec extends FunSpec
 
       val seq = Seq(r1, r2, r3, r4)
 
-      val res = seq.localVariance
+      val res = seq.localVariance()
 
       cfor(0)(_ < rows, _ + 1) { row =>
         cfor(0)(_ < cols, _ + 1) { col =>

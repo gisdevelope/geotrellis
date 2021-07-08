@@ -19,11 +19,11 @@ package geotrellis.raster.summary
 import geotrellis.raster._
 
 import geotrellis.raster.testkit._
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class StatsMethodsSpec extends FunSpec
-                          with RasterMatchers with TestFiles
-                          with Matchers {
+class StatsMethodsSpec extends AnyFunSpec with RasterMatchers with TestFiles with Matchers {
+
   describe("StatsMethods") {
     it("gets expected class breaks from test raster.") {
       val testRaster = {
@@ -42,7 +42,7 @@ class StatsMethodsSpec extends FunSpec
       val r =  loadTestArg("quad8").tile
       val std = r.standardDeviations(1000)
 
-      val d = std.toArray
+      val d = std.toArray()
 
       d(0) should be (-1341)
       d(10) should be (-447)
@@ -73,7 +73,7 @@ class StatsMethodsSpec extends FunSpec
       }
       val histo = testRaster.histogram
 
-      histo.totalCount should be (18)
+      histo.totalCount() should be (18)
       histo.itemCount(11) should be (2)
       histo.itemCount(12) should be (3)
 

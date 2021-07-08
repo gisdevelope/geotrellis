@@ -20,10 +20,9 @@ import geotrellis.raster._
 import geotrellis.vector.Extent
 import geotrellis.util.MethodExtensions
 
-import spire.syntax.cfor._
 
 
-trait ResampleMethods[T <: CellGrid] extends MethodExtensions[T] {
+trait ResampleMethods[T <: CellGrid[Int]] extends MethodExtensions[T] {
   def resample(extent: Extent, targetExtent: RasterExtent, method: ResampleMethod): T
 
   def resample(source: Extent, target: RasterExtent): T =

@@ -18,14 +18,11 @@ package geotrellis.raster.io.geotiff
 
 import geotrellis.util.ByteReader
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
 import geotrellis.vector.Extent
 import geotrellis.proj4.CRS
 import geotrellis.raster.crop.Crop
 import geotrellis.raster.resample.ResampleMethod
-import spire.syntax.cfor._
 
-import java.nio.ByteBuffer
 
 case class SinglebandGeoTiff(
   tile: Tile,
@@ -41,7 +38,7 @@ case class SinglebandGeoTiff(
     SinglebandGeoTiff(f(tile), extent, crs, tags, options, overviews)
 
   def withStorageMethod(storageMethod: StorageMethod): SinglebandGeoTiff =
-    SinglebandGeoTiff(tile.toArrayTile, extent, crs, tags, options.copy(storageMethod = storageMethod), overviews)
+    SinglebandGeoTiff(tile.toArrayTile(), extent, crs, tags, options.copy(storageMethod = storageMethod), overviews)
 
   def imageData: GeoTiffImageData =
     tile match {
@@ -53,7 +50,7 @@ case class SinglebandGeoTiff(
     extent.intersection(subExtent) match {
       case Some(ext) =>
         val raster: Raster[Tile] = this.raster.crop(ext, options)
-        SinglebandGeoTiff(raster, ext, this.crs, this.tags, this.options, this.overviews)
+        SinglebandGeoTiff(raster.tile, raster.extent, this.crs, this.tags, this.options, this.overviews)
       case _ => throw GeoAttrsError(s"Extent to crop by ($subExtent) should intersect the imagery extent ($extent).")
     }
   }
@@ -65,12 +62,12 @@ case class SinglebandGeoTiff(
     val raster: Raster[Tile] =
       this.raster.crop(colMin, rowMin, colMax, rowMax)
 
-    SinglebandGeoTiff(raster, raster._2, this.crs, this.tags, this.options, this.overviews)
+    SinglebandGeoTiff(raster.tile, raster.extent, this.crs, this.tags, this.options, this.overviews)
   }
 
-  def crop(gridBounds: GridBounds): SinglebandGeoTiff =
+  def crop(gridBounds: GridBounds[Int]): SinglebandGeoTiff =
     crop(gridBounds.colMin, gridBounds.rowMin, gridBounds.colMax, gridBounds.rowMax)
-  
+
   def crop(subExtent: Extent): SinglebandGeoTiff = crop(subExtent, Crop.Options.DEFAULT)
 
   def crop(subExtent: Extent, cellSize: CellSize, resampleMethod: ResampleMethod, strategy: OverviewStrategy): SinglebandRaster =
@@ -78,7 +75,7 @@ case class SinglebandGeoTiff(
       .crop(subExtent, Crop.Options(clamp = false))
       .resample(RasterExtent(subExtent, cellSize), resampleMethod, strategy)
 
-  def crop(windows: Seq[GridBounds]): Iterator[(GridBounds, Tile)] = tile match {
+  def crop(windows: Seq[GridBounds[Int]]): Iterator[(GridBounds[Int], Tile)] = tile match {
     case geotiffTile: GeoTiffTile => geotiffTile.crop(windows)
     case arrayTile: Tile => arrayTile.crop(windows)
   }
@@ -117,7 +114,7 @@ case class SinglebandGeoTiff(
     val storageMethod = Tiled(blockSize, blockSize)
     val overviewOptions = options.copy(subfileType = Some(ReducedImage), storageMethod = storageMethod)
     val overviewTile = GeoTiffBuilder[Tile].makeTile(
-      segments.toIterator, segmentLayout, cellType, options.compression
+      segments.iterator, segmentLayout, cellType, options.compression
     )
 
     SinglebandGeoTiff(overviewTile, extent, crs, Tags.empty, overviewOptions)

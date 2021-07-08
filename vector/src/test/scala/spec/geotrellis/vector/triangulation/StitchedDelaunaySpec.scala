@@ -1,17 +1,35 @@
+/*
+ * Copyright 2019 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package geotrellis.vector.triangulation
 
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.geom.Coordinate
 import geotrellis.util.Direction
 import geotrellis.util.Direction._
 import geotrellis.vector._
 import geotrellis.vector.io.wkt.WKT
 
-import org.scalatest.{FunSpec, Matchers}
 import spire.syntax.cfor._
 
 import scala.util.Random
 
-class StitchedDelaunaySpec extends FunSpec with Matchers {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class StitchedDelaunaySpec extends AnyFunSpec with Matchers {
 
   def time[R](msg: String)(block: => R): R = {
     val t0 = System.nanoTime()
@@ -22,7 +40,7 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
   }
 
   def randInRange(low: Double, high: Double): Double = {
-    val x = Random.nextDouble
+    val x = Random.nextDouble()
     low * (1-x) + high * x
   }
 
@@ -56,7 +74,7 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
 
   val directions = Seq(TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, BottomRight)
   val chunks: Seq[(Extent, Direction)] = directions.map{ dir => (directionToExtent(dir), dir) }
-  def findDirection(pt: Coordinate) = chunks.find { pair => pair._1.contains(Point.jtsCoord2Point(pt)) }.get._2
+  def findDirection(pt: Coordinate) = chunks.find { pair => pair._1.contains(Point(pt)) }.get._2
 
   describe("Stitched Delaunay triangulation") {
     it("should have no stitch triangles with circumcircles containing other points") {
@@ -80,7 +98,7 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
       // stitch.writeWKT("stitched.wkt")
       // triangulations.foreach{ case (dir, tri) => tri.writeWKT(s"triangles${dir}.wkt") }
 
-       stitch.triangles.forall { case (ai, bi, ci) => {
+       stitch.triangles().forall { case (ai, bi, ci) => {
         val a = stitch.indexToCoord(ai)
         val b = stitch.indexToCoord(bi)
         val c = stitch.indexToCoord(ci)
@@ -93,8 +111,8 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
 
     it ("Should correctly stitch a problematic data set") {
       val wktIS = getClass.getResourceAsStream("/wkt/erringPoints.wkt")
-      val wktString = scala.io.Source.fromInputStream(wktIS).getLines.mkString
-      val points: Array[Coordinate] = WKT.read(wktString).asInstanceOf[MultiPoint].points.map(_.jtsGeom.getCoordinate)
+      val wktString = scala.io.Source.fromInputStream(wktIS).getLines().mkString
+      val points: Array[Coordinate] = WKT.read(wktString).asInstanceOf[MultiPoint].points.map(_.getCoordinate)
 
       val keyedPoints: Seq[(Direction, Array[Coordinate])] =
         points
@@ -122,7 +140,7 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
       // stitch.writeWKT("stitched.wkt")
       // triangulations.foreach{ case (dir, tri) => tri.writeWKT(s"triangles${dir}.wkt") }
 
-      stitch.triangles.forall { case (ai, bi, ci) => {
+      stitch.triangles().forall { case (ai, bi, ci) => {
         val a = stitch.indexToCoord(ai)
         val b = stitch.indexToCoord(bi)
         val c = stitch.indexToCoord(ci)
@@ -162,12 +180,12 @@ class StitchedDelaunaySpec extends FunSpec with Matchers {
       cfor(0)(_ < stitch.pointSet.length, _ + 1) { i =>
         println(s"${i}: ${stitch.pointSet.getCoordinate(i)}")
       }
-      println(s"Resulting triangles: ${stitch.triangles}")
+      println(s"Resulting triangles: ${stitch.triangles()}")
 
       val dt = DelaunayTriangulation(points)
       println(s"Raw triangulation result: ${dt.triangleMap.triangleVertices}")
 
-      (dt.triangleMap.triangleVertices.sameElements(stitch.triangles)) should be (true)
+      (dt.triangleMap.triangleVertices.sameElements(stitch.triangles())) should be (true)
     }
   }
 }

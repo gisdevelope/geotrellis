@@ -34,7 +34,7 @@ object Minority extends Serializable {
     apply(level, rs)
 
   def apply(level: Int, rs: Traversable[Tile])(implicit d: DI): Tile = {
-    // TODO: Replace all of these with rs.assertEqualDimensions
+    // TODO: Replace all of these with rs.assertEqualDimensions()
     if(Set(rs.map(_.dimensions)).size != 1) {
       val dimensions = rs.map(_.dimensions).toSeq
       throw new GeoAttrsError("Cannot combine rasters with different dimensions." +
@@ -46,7 +46,7 @@ object Minority extends Serializable {
       sys.error(s"Can't compute minority of empty sequence")
     } else {
       val newCellType = rs.map(_.cellType).reduce(_.union(_))
-      val (cols, rows) = rs.head.dimensions
+      val Dimensions(cols, rows) = rs.head.dimensions
       val tile = ArrayTile.alloc(newCellType, cols, rows)
 
       if(newCellType.isFloatingPoint) {
@@ -54,7 +54,7 @@ object Minority extends Serializable {
 
         cfor(0)(_ < rows, _ + 1) { row =>
           cfor(0)(_ < cols, _ + 1) { col =>
-            counts.clear
+            counts.clear()
             for(r <- rs) {
               val v = r.getDouble(col, row)
               if(isData(v)) {
@@ -83,7 +83,7 @@ object Minority extends Serializable {
 
         for(col <- 0 until cols) {
           for(row <- 0 until rows) {
-            counts.clear
+            counts.clear()
             for(r <- rs) {
               val v = r.get(col, row)
               if(isData(v)) {

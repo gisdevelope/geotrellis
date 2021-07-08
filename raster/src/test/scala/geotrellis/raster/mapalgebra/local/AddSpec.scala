@@ -19,10 +19,11 @@ package geotrellis.raster.mapalgebra.local
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
 import geotrellis.raster.testkit._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class AddSpec extends FunSpec 
+class AddSpec extends AnyFunSpec
                  with Matchers 
                  with RasterMatchers 
                  with TileBuilders {
@@ -103,8 +104,8 @@ class AddSpec extends FunSpec
     def ri(n:Int) = ArrayTile(Array.fill(100)(n), 10, 10)
     def rd(n:Double) = ArrayTile(Array.fill(100)(n), 10 ,10)
 
-    def addInts(ns:Int*) = (ns.map(n => ri(n))).localAdd
-    def addDoubles(ns:Double*) = (ns.map(n => rd(n))).localAdd
+    def addInts(ns:Int*) = (ns.map(n => ri(n))).localAdd()
+    def addDoubles(ns:Double*) = (ns.map(n => rd(n))).localAdd()
 
     it("adds integers") {
       val a = 3

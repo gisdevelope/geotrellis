@@ -18,12 +18,13 @@ package geotrellis.raster.io.geotiff
 
 import geotrellis.raster._
 import geotrellis.raster.testkit._
-import geotrellis.raster.io.geotiff.reader._
 
 import spire.syntax.cfor._
-import org.scalatest._
 
-class SinglebandCropIteratorSpec extends FunSpec
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class SinglebandCropIteratorSpec extends AnyFunSpec
   with Matchers
   with RasterMatchers
   with GeoTiffTestUtils {
@@ -32,7 +33,7 @@ class SinglebandCropIteratorSpec extends FunSpec
     val path = geoTiffPath("ls8_int32.tif")
     val geoTiff = {
       val tiff = SinglebandGeoTiff(path)
-      tiff.copy(tile = tiff.tile.toArrayTile)
+      tiff.copy(tile = tiff.tile.toArrayTile())
     }
     val cols = geoTiff.imageData.cols
     val rows = geoTiff.imageData.rows
@@ -64,16 +65,16 @@ class SinglebandCropIteratorSpec extends FunSpec
         new SinglebandCropIterator(geoTiff, windowedCols, windowedRows)
 
       val expected: Array[Tile] =
-        Array(geoTiff.raster.crop(0, 0, 256, 256),
-          geoTiff.raster.crop(256, 0, 512, 256),
-          geoTiff.raster.crop(0, 256, 256, 512),
-          geoTiff.raster.crop(256, 256, 512, 512))
+        Array(geoTiff.raster.tile.crop(0, 0, 256, 256),
+          geoTiff.raster.tile.crop(256, 0, 512, 256),
+          geoTiff.raster.tile.crop(0, 256, 256, 512),
+          geoTiff.raster.tile.crop(256, 256, 512, 512))
 
       val actual: Array[Tile] =
-        Array(singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile)
+        Array(singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile)
 
       cfor(0)(_ < actual.length, _ + 1) { i =>
         assertEqual(expected(i), actual(i))
@@ -87,7 +88,7 @@ class SinglebandCropIteratorSpec extends FunSpec
         new SinglebandCropIterator(geoTiff, windowedCols, windowedRows)
 
       val expected = geoTiff.tile
-      val actual = singlebandIterator.next.tile
+      val actual = singlebandIterator.next().tile
 
       assertEqual(expected, actual)
     }
@@ -99,20 +100,20 @@ class SinglebandCropIteratorSpec extends FunSpec
         new SinglebandCropIterator(geoTiff, windowedCols, windowedRows)
 
       val expected: Array[Tile] =
-        Array(geoTiff.raster.crop(0, 0, 250, 450),
-          geoTiff.raster.crop(250, 0, 500, 450),
-          geoTiff.raster.crop(500, 0, 512, 450),
-          geoTiff.raster.crop(0, 450, 250, 512),
-          geoTiff.raster.crop(250, 450, 500, 512),
-          geoTiff.raster.crop(500, 450, 512, 512))
+        Array(geoTiff.raster.tile.crop(0, 0, 250, 450),
+          geoTiff.raster.tile.crop(250, 0, 500, 450),
+          geoTiff.raster.tile.crop(500, 0, 512, 450),
+          geoTiff.raster.tile.crop(0, 450, 250, 512),
+          geoTiff.raster.tile.crop(250, 450, 500, 512),
+          geoTiff.raster.tile.crop(500, 450, 512, 512))
 
       val actual: Array[Tile] =
-        Array(singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile,
-          singlebandIterator.next.tile)
+        Array(singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile,
+          singlebandIterator.next().tile)
 
       cfor(0)(_ < actual.length, _ + 1) { i =>
         assertEqual(expected(i), actual(i))
@@ -126,10 +127,10 @@ class SinglebandCropIteratorSpec extends FunSpec
         new SinglebandCropIterator(geoTiff, windowedCols, windowedRows)
 
       cfor(0)(_ < 3, _ + 1) { i =>
-        singlebandIterator.next.tile
+        singlebandIterator.next().tile
         singlebandIterator.hasNext should be (true)
       }
-      singlebandIterator.next.tile
+      singlebandIterator.next().tile
       singlebandIterator.hasNext should be (false)
     }
   }

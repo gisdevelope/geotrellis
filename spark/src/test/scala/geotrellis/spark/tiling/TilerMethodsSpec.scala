@@ -18,14 +18,14 @@ package geotrellis.spark.tiling
 
 import geotrellis.raster._
 import geotrellis.vector._
-import geotrellis.proj4._
+import geotrellis.layer._
 
 import geotrellis.spark._
-import geotrellis.spark.tiling._
 import geotrellis.spark.testkit._
 
-import org.scalatest._
-import org.apache.spark._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
 import org.apache.spark.rdd._
 
 // Defined here because of serialization
@@ -34,10 +34,7 @@ class IntTilerKeyMethods(val self: Int, extents: List[Extent]) extends TilerKeyM
   def translate(k: SpatialKey): SpatialKey = k
 }
 
-class TilerMethodsSpec extends FunSpec
-  with Matchers
-  with TestEnvironment
-{
+class TilerMethodsSpec extends AnyFunSpec with Matchers with TestEnvironment {
 
   describe("Tiler") {
     it("should tile overlapping rasters"){
@@ -65,14 +62,14 @@ class TilerMethodsSpec extends FunSpec
       val rdd: RDD[(Int, Tile)] = sc.parallelize(Array( (1, tile1), (2, tile2) ))
       val tiled =
         rdd.cutTiles(IntConstantNoDataCellType, layoutDefinition)
-          .reduceByKey { case (tile1, tile2) => if(tile1.get(0,0) > tile2.get(0,0)) tile2.merge(tile1) else tile1.merge(tile2) }
-          .collect
+          .reduceByKey { (tile1, tile2) => if(tile1.get(0,0) > tile2.get(0,0)) tile2.merge(tile1) else tile1.merge(tile2) }
+          .collect()
           .toMap
 
       tiled.size should be (4*4 - 2)
 
       val n = NODATA
-      tiled( SpatialKey(1,2) ).toArray should be (
+      tiled( SpatialKey(1,2) ).toArray() should be (
         Array(
           1, 1, 2, 2,
           1, 1, 2, 2,
@@ -81,7 +78,7 @@ class TilerMethodsSpec extends FunSpec
           n, n, 2, 2)
       )
 
-      tiled( SpatialKey(1,1) ).toArray should be (
+      tiled( SpatialKey(1,1) ).toArray() should be (
         Array(
           1, 1, 1, 1,
           1, 1, 1, 1,

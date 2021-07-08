@@ -21,14 +21,15 @@ import geotrellis.vector.Extent
 
 import collection._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 /**
   * Since the abstract bicubic resample inherits from cubic
   * resample all that is tested here is that the points are evaluated
   * and passed to the uniCubicResample method in the correct order.
   */
-class BicubicResampleSpec extends FunSpec with Matchers {
+class BicubicResampleSpec extends AnyFunSpec with Matchers {
 
   // Returned if bicubic resample is used.
   // Bilinear resample should never be able to return this
@@ -85,9 +86,9 @@ class BicubicResampleSpec extends FunSpec with Matchers {
           override def uniCubicResample(
             p: Array[Double],
             x: Double): Double = {
-            if (q.isEmpty && c != 1) fail
-            else if (!q.isEmpty) {
-              val arr = q.dequeue
+            if (q.isEmpty && c != 1) fail()
+            else if (q.nonEmpty) {
+              val arr = q.dequeue()
               p should be (arr)
             } else {
               p should be (lastResampArr)

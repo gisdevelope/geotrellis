@@ -20,19 +20,14 @@ import geotrellis.raster._
 import geotrellis.vector._
 import geotrellis.proj4._
 
-import org.geotools.coverage.grid._
-import org.geotools.coverage.grid.io._
-import org.geotools.gce.geotiff._
-import org.scalatest._
 
 import java.awt.image.DataBuffer
-import scala.collection.JavaConverters._
 import scala.math.{min, max}
 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-abstract class RasterToGridCoverage2DSpec[T <: CellGrid](implicit ev1: Raster[T] => ToGridCoverage2DMethods, ev2: ProjectedRaster[T] => ToGridCoverage2DMethods)
-    extends FunSpec
-    with Matchers {
+abstract class RasterToGridCoverage2DSpec[T <: CellGrid[Int]](implicit ev1: Raster[T] => ToGridCoverage2DMethods, ev2: ProjectedRaster[T] => ToGridCoverage2DMethods) extends AnyFunSpec with Matchers {
 
   val tile: T
   val extent: Extent
@@ -41,8 +36,8 @@ abstract class RasterToGridCoverage2DSpec[T <: CellGrid](implicit ev1: Raster[T]
 
   lazy val gridCoverage =
     crs match {
-      case Some(c) => ProjectedRaster(Raster(tile, extent), c).toGridCoverage2D
-      case None => Raster(tile, extent).toGridCoverage2D
+      case Some(c) => ProjectedRaster(Raster(tile, extent), c).toGridCoverage2D()
+      case None => Raster(tile, extent).toGridCoverage2D()
     }
 
   lazy val raster = Raster(tile, extent)

@@ -19,11 +19,10 @@ package geotrellis.raster.render
 import geotrellis.raster._
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class ColorRasterSpec extends FunSpec with Matchers
-                                      with RasterMatchers
-                                      with TileBuilders {
+class ColorRasterSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
   describe("ColorRaster - Integers") {
     val n = NODATA
 
@@ -146,7 +145,7 @@ class ColorRasterSpec extends FunSpec with Matchers
 
       intercept[Exception] {
         r.color(ColorMap(map, ColorMap.Options(Exact, 5, fallbackColor = 7, strict = true)))
-         .toArray
+         .toArray()
       }
     }
   }
@@ -272,7 +271,7 @@ class ColorRasterSpec extends FunSpec with Matchers
 
       intercept[Exception] {
         r.color(ColorMap(map, ColorMap.Options(Exact, 5, fallbackColor = 7, strict = true)))
-         .toArray
+         .toArray()
       }
     }
   }

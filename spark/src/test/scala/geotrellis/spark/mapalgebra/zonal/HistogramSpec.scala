@@ -16,21 +16,18 @@
 
 package geotrellis.spark.mapalgebra.zonal
 
-import Implicits._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
 import geotrellis.spark.testkit.testfiles._
 import geotrellis.raster._
 import geotrellis.raster.histogram.Histogram
 import geotrellis.spark.testkit._
 
-import geotrellis.vector._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
 import collection._
 
-class HistogramSpec extends FunSpec with TestEnvironment with TestFiles {
+class HistogramSpec extends AnyFunSpec with TestEnvironment with TestFiles {
 
   describe("Histogram Zonal Operation") {
     it("gives correct histogram for example raster rdds") {
@@ -68,24 +65,24 @@ class HistogramSpec extends FunSpec with TestEnvironment with TestFiles {
         TileLayout(3, 4, 3, 2)
       )
 
-      val r = rdd.stitch
-      val zones = zonesRDD.stitch
+      val r = rdd.stitch()
+      val zones = zonesRDD.stitch()
       val (cols, rows) = (r.cols, r.rows)
 
       val zoneValues = mutable.Map[Int, mutable.ListBuffer[Int]]()
 
       for(row <- 0 until rows) {
         for(col <- 0 until cols) {
-          val z = zones.get(col, row)
+          val z = zones.tile.get(col, row)
           if(!zoneValues.contains(z)) zoneValues(z) = mutable.ListBuffer[Int]()
-          zoneValues(z) += r.get(col, row)
+          zoneValues(z) += r.tile.get(col, row)
         }
       }
 
       val expected =
-        zoneValues.toMap.mapValues { list =>
-          list.distinct
-            .map { v => (v, list.filter(_ == v).length) }
+        zoneValues.toMap.map { case (key, list) =>
+          key -> list.distinct
+            .map { v => (v, list.count(_ == v)) }
             .toMap
         }
 

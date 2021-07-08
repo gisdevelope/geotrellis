@@ -19,13 +19,11 @@ package geotrellis.raster.hydrology
 import geotrellis.vector.Extent
 import geotrellis.raster._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 import geotrellis.raster.testkit._
 
-class AccumulationSpec extends FunSpec 
-                          with Matchers 
-                          with RasterMatchers 
-                          with TileBuilders {
+class AccumulationSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
 
   describe("Accumulation"){
     it("Calulates the accumulation of water using a flow dirrection raster") {
@@ -53,7 +51,7 @@ class AccumulationSpec extends FunSpec
             0,2,4,7,34,1),
             ncols,nrows)
 
-      assertEqual(inTile.accumulation, outTile)
+      assertEqual(inTile.accumulation(), outTile)
     } 
 
     it("Calulates the accumulation of water using a flow dirrection raster using multiple flow directions") {
@@ -81,7 +79,7 @@ class AccumulationSpec extends FunSpec
             0,2,6,14,30,62),
             ncols,nrows)
 
-      assertEqual(inTile.accumulation, outTile)
+      assertEqual(inTile.accumulation(), outTile)
     } 
   }
 }

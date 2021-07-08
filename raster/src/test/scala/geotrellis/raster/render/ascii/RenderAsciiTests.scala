@@ -13,19 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package geotrellis.raster.render.ascii
 
 import geotrellis.raster.io.geotiff.{GeoTiffTestUtils, SinglebandGeoTiff}
 import geotrellis.raster.render.ascii.AsciiArtEncoder.Palette
 import geotrellis.raster.testkit.TileBuilders
-import org.scalatest.{FunSuite, Inspectors, Matchers}
+
+import org.scalatest.Inspectors
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 /**
  * Simple tests to check basic ASCII art rendering.
  *
  * @since 9/6/17
  */
-class RenderAsciiTests extends FunSuite with Matchers with TileBuilders with Inspectors {
+class RenderAsciiTests extends AnyFunSuite with Matchers with TileBuilders with Inspectors {
 
   test("generate ASCII art from graident tile") {
     val palettes = Seq(
@@ -36,10 +40,10 @@ class RenderAsciiTests extends FunSuite with Matchers with TileBuilders with Ins
       AsciiArtEncoder.Palette.STIPLED,
       AsciiArtEncoder.Palette.BINARY
     )
-    forEvery(palettes) { palette ⇒
+    forEvery(palettes) { palette =>
       val sample = createConsecutiveTile(palette.length)
       val render = sample.renderAscii(palette)
-      forAll(palette.values) { c ⇒
+      forAll(palette.values) { c =>
         assert(render.contains(c))
       }
     }
@@ -97,7 +101,7 @@ class RenderAsciiTests extends FunSuite with Matchers with TileBuilders with Ins
 
     println(render)
 
-    forEvery(render.toCharArray.distinct.filter(_ != '\n'))(c ⇒
+    forEvery(render.toCharArray.distinct.filter(_ != '\n'))(c =>
       assert(c == palette.nodata || palette.values.contains(c))
     )
 

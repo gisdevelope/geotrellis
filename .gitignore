@@ -1,3 +1,10 @@
+# Operating System Files
+
+*.DS_Store
+Thumbs.db
+
+# Docs
+
 index.html
 index.js
 package.html
@@ -5,48 +12,82 @@ lib
 site/
 docs/_build/
 
-project/boot
-project/plugins/project
-project/plugins/target
-project/target
-target
-.ensime
-\#*#
-*~
-.#*
-.lib
-*.aux.xml
-*.jar
-*.crc
-_SUCCESS
+# Build Files
 
-*.pyc
-.project
+bin
+target
+build/
+.gradle
+cmake-build-debug
+
+# Eclipse Project Files
+
 .classpath
-.cache
+.project
 .settings
-.history
-.idea
-.DS_Store
+
+# IntelliJ IDEA Files
+
 *.iml
-*.swp
-*.swo
-*.sublime-*
-.vagrant
+*.ipr
+*.iws
+*.idea
+
+# Spring Bootstrap artifacts
+
+dependency-reduced-pom.xml
+README.html
+
+# Sublime files
+
+*.sublime-workspace
+
+# VSCode files
+
+.vscode
+.history
+
+# Metals
+
+.metals
+.bloop
+metals.sbt
+
+# SBT
+
+.bsp
+
+# Terraform
 
 .terraform
 scripts/emr/terraform/variables.tf*
 scripts/emr/terraform/terraform.tfstate*
 
-lib
-index.html
-index.js
-.ensime*
+# Vagrant
+
+.vagrant
+
+# Test files
+
+spark/src/test/resources/vlm/*catalog*
+
+# Other
+
+.#*
+.lib
+*.aux.xml
+*.jar
+*.crc
+
+_SUCCESS
+
+*.pyc
+.cache
+.settings
+*.swp
+*.swo
 
 nohup.out
-
-site/
-
 derby.log
 metastore_db/
 *.log

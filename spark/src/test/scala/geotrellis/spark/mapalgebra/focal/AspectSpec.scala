@@ -16,13 +16,15 @@
 
 package geotrellis.spark.mapalgebra.focal
 
+import geotrellis.layer._
 import geotrellis.raster._
+import geotrellis.layer.TileLayerCollection
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class AspectSpec extends FunSpec with TestEnvironment {
+class AspectSpec extends AnyFunSpec with TestEnvironment {
 
   describe("Aspect Elevation Spec") {
 

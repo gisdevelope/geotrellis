@@ -20,19 +20,16 @@ import geotrellis.proj4.LatLng
 import geotrellis.raster._
 import geotrellis.raster.costdistance.SimpleCostDistance
 import geotrellis.raster.rasterize.Rasterizer
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.util._
 import geotrellis.vector._
 
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.AccumulatorV2
 
 import scala.collection.mutable
-
 
 /**
   * This Spark-enabled implementation of the standard cost-distance
@@ -54,12 +51,33 @@ object IterativeCostDistance {
   val logger = Logger.getLogger(IterativeCostDistance.getClass)
 
   /**
+    * Compute the resolution (in meters per pixel) of a layer.
+    */
+  private [spark] def computeResolution[K: * => SpatialKey, V: * => Tile](
+    friction: RDD[(K, V)] with Metadata[TileLayerMetadata[K]]
+  ) = {
+    val md = friction.metadata
+    val mt = md.mapTransform
+    val key: SpatialKey = md.bounds.get.minKey
+    val extent = mt(key).reproject(md.crs, LatLng)
+
+    val latitude = (extent.ymax + extent.ymin) / 2.0
+    val degreesPerKey = extent.xmax - extent.xmin
+    // https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
+    val metersPerDegree = 111111 * math.cos(math.toRadians(latitude))
+    val metersPerKey = metersPerDegree * degreesPerKey
+    val keysPerPixel = 1.0 / md.layout.tileCols
+
+    metersPerKey * keysPerPixel
+  }
+
+  /**
     * An accumulator to hold lists of edge changes.
     */
   class ChangesAccumulator extends AccumulatorV2[KeyCostPair, Changes] {
     private val list: Changes = mutable.ArrayBuffer.empty
 
-    def copy: ChangesAccumulator = {
+    def copy(): ChangesAccumulator = {
       val other = new ChangesAccumulator
       other.merge(this)
       other
@@ -70,29 +88,16 @@ object IterativeCostDistance {
     def isZero: Boolean = list.isEmpty
     def merge(other: AccumulatorV2[KeyCostPair, Changes]): Unit =
       this.synchronized { list ++= other.value }
-    def reset: Unit = this.synchronized { list.clear }
+    def reset(): Unit = this.synchronized { list.clear() }
     def value: Changes = list
   }
 
-  def computeResolution[K: (? => SpatialKey), V: (? => Tile)](
-    friction: RDD[(K, V)] with Metadata[TileLayerMetadata[K]]
-  ) = {
-    val md = friction.metadata
-    val mt = md.mapTransform
-    val key: SpatialKey = md.bounds.get.minKey
-    val extent = mt(key).reproject(md.crs, LatLng)
-    val degrees = extent.xmax - extent.xmin
-    val meters = degrees * (6378137 * 2.0 * math.Pi) / 360.0
-    val pixels = md.layout.tileCols
-    math.abs(meters / pixels)
-  }
-
-  private def geometryToKeys[K: (? => SpatialKey)](
+  private def geometryToKeys[K: * => SpatialKey](
     md: TileLayerMetadata[K],
     g: Geometry
   ) = {
     val keys = mutable.ArrayBuffer.empty[SpatialKey]
-    val bounds = md.layout.mapTransform(g.envelope)
+    val bounds = md.layout.mapTransform(g.extent)
 
     var row = bounds.rowMin; while (row <= bounds.rowMax) {
       var col = bounds.colMin; while (col <= bounds.colMax) {
@@ -105,7 +110,7 @@ object IterativeCostDistance {
     keys.toList
   }
 
-  private def geometryMap[K: (? => SpatialKey)](
+  private def geometryMap[K: * => SpatialKey](
     md: TileLayerMetadata[K],
     gs: Seq[Geometry]
   ): Map[SpatialKey, Seq[Geometry]] = {
@@ -122,7 +127,7 @@ object IterativeCostDistance {
     * @param  geometries  The starting locations from-which to compute the cost of traveling
     * @param  maxCost     The maximum cost before pruning a path (in units of "seconds")
     */
-  def apply[K: (? => SpatialKey), V: (? => Tile)](
+  def apply[K: * => SpatialKey, V: * => Tile](
     friction: RDD[(K, V)] with Metadata[TileLayerMetadata[K]],
     geometries: Seq[Geometry],
     maxCost: Double = Double.PositiveInfinity
@@ -177,7 +182,7 @@ object IterativeCostDistance {
       (k, v, SimpleCostDistance.generateEmptyCostTile(cols, rows))
     }).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-    costs.count
+    costs.count()
 
     // Repeatedly map over the RDD of cost tiles until no more changes
     // occur on the periphery of any tile.
@@ -185,11 +190,11 @@ object IterativeCostDistance {
       val _changes: Map[SpatialKey, Seq[SimpleCostDistance.Cost]] =
         accumulator.value
           .groupBy(_._1)
-          .map({ case (k, list) => (k, list.map({ case (_, v) => v })) })
+          .map({ case (k, list) => (k, list.map({ case (_, v) => v }).toSeq) })
       val changes = sparkContext.broadcast(_changes)
       logger.debug(s"At least ${changes.value.size} changed tiles")
 
-      accumulator.reset
+      accumulator.reset()
 
       val previous = costs
 
@@ -246,7 +251,7 @@ object IterativeCostDistance {
         }
       }).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
-      costs.count
+      costs.count()
       previous.unpersist()
     } while (accumulator.value.nonEmpty)
 

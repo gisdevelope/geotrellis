@@ -92,8 +92,14 @@ object TiffTagFieldValue {
     fieldValues += TiffTagFieldValue(PredictorTag, ShortsFieldType, 1, imageData.decompressor.predictorCode)
     fieldValues += TiffTagFieldValue(PhotometricInterpTag, ShortsFieldType, 1, geoTiff.options.colorSpace)
     fieldValues += TiffTagFieldValue(SamplesPerPixelTag, ShortsFieldType, 1, imageData.bandCount)
-    fieldValues += TiffTagFieldValue(PlanarConfigurationTag, ShortsFieldType, 1, PlanarConfigurations.PixelInterleave)
     fieldValues += TiffTagFieldValue(SampleFormatTag, ShortsFieldType, 1, imageData.bandType.sampleFormat)
+
+    imageData.segmentLayout.interleaveMethod match {
+      case PixelInterleave =>
+        fieldValues += TiffTagFieldValue(PlanarConfigurationTag, ShortsFieldType, 1, PlanarConfigurations.PixelInterleave)
+      case BandInterleave =>
+        fieldValues += TiffTagFieldValue(PlanarConfigurationTag, ShortsFieldType, 1, PlanarConfigurations.BandInterleave)
+    }
 
     geoTiff.options.subfileType.foreach { sft =>
       fieldValues += TiffTagFieldValue(NewSubfileTypeTag, IntsFieldType, 1, toBytes(sft.code))
@@ -110,7 +116,7 @@ object TiffTagFieldValue {
 
       val divider = 1 << bitsPerSample
 
-      for(cmap ← geoTiff.options.colorMap) {
+      for(cmap <- geoTiff.options.colorMap) {
         val palette = IndexedColorMap.toTiffPalette(cmap)
         val size = math.min(palette.size, divider)
         // Indexed color palette is stored as three consecutive arrays containing
@@ -186,7 +192,7 @@ object TiffTagFieldValue {
       case None =>
     }
 
-    val metadata = toBytes(new scala.xml.PrettyPrinter(Int.MaxValue, 2).format(Tags(modifiedHeaderTags, geoTiff.tags.bandTags).toXml))
+    val metadata = toBytes(new scala.xml.PrettyPrinter(Int.MaxValue, 2).format(Tags(modifiedHeaderTags, geoTiff.tags.bandTags).toXml()))
     fieldValues += TiffTagFieldValue(MetadataTag, AsciisFieldType, metadata.length, metadata)
 
     // Tags that are different if it is striped or tiled storage, and a function

@@ -16,8 +16,7 @@
 
 package geotrellis.vector.triangulation
 
-import com.vividsolutions.jts.geom.Coordinate
-import geotrellis.vector.{Line, MultiLine, Point}
+import geotrellis.vector.LineString
 import geotrellis.vector.RobustPredicates.{LEFTOF, ON, RIGHTOF}
 import geotrellis.vector.mesh.{HalfEdgeTable, IndexedPointSet}
 
@@ -195,7 +194,7 @@ final class DelaunayStitcher(
       }
     }
 
-    val allEs = collection.mutable.Set.empty[Line]
+    val allEs = collection.mutable.Set.empty[LineString]
 
     var continue = true
     while(continue) {
@@ -233,7 +232,7 @@ final class DelaunayStitcher(
           setNext(getPrev(lcand), getFlip(base))
           killEdge(getFlip(lcand))
           killEdge(lcand)
-          
+
           lcand = e
 
           if (debug) {
@@ -355,7 +354,7 @@ final class DelaunayStitcher(
     }
     setNext(getPrev(e), getFlip(base))
     setNext(base, e)
-    if (debug) println(s"Found base [$base]: [${getSrc(base)} ⇒ ${getDest(base)}], ${(getCoordinate(getSrc(base)), getCoordinate(getDest(base)))}")
+    if (debug) println(s"Found base [$base]: [${getSrc(base)} => ${getDest(base)}], ${(getCoordinate(getSrc(base)), getCoordinate(getDest(base)))}")
 
     if (isLinear && relativeTo(base, getDest(e)) == ON) {
       (base, true)
@@ -377,9 +376,9 @@ final class DelaunayStitcher(
           cand = hold
         }
 
-        if (debug) println(s"Found candidate [$cand]: [${getSrc(cand)} ⇒ ${getDest(cand)}], ${(getCoordinate(getSrc(cand)), getCoordinate(getDest(cand)))}")
+        if (debug) println(s"Found candidate [$cand]: [${getSrc(cand)} => ${getDest(cand)}], ${(getCoordinate(getSrc(cand)), getCoordinate(getDest(cand)))}")
         val added = createHalfEdges(getSrc(base), getDest(cand))
-        if (debug) println(s"Adding [$added]: [${getSrc(added)} ⇒ ${getDest(added)}]")
+        if (debug) println(s"Adding [$added]: [${getSrc(added)} => ${getDest(added)}]")
 
         setNext(rotCCWDest(cand), getFlip(added))
         setNext(added, getFlip(cand))

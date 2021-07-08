@@ -18,15 +18,15 @@ package geotrellis.raster.viewshed
 
 import geotrellis.raster._
 import geotrellis.raster.testkit._
-import org.scalatest._
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 /**
  * Created by jchien on 5/1/14.
  */
-class ApproxViewshedSpec extends FunSpec
-                            with Matchers
-                            with RasterMatchers with TestFiles
-                            with TileBuilders {
+class ApproxViewshedSpec extends AnyFunSpec with Matchers with RasterMatchers with TestFiles with TileBuilders {
+
   describe("Viewshed") {
     it("computes the viewshed of a flat int plane") {
       val r = createTile(Array.fill(7 * 8)(1), 7, 8)
@@ -105,7 +105,7 @@ class ApproxViewshedSpec extends FunSpec
 
       val (x, y) = (-93.63300872055451407, 30.54649743277299123) // create overload
       val (col, row) = re.mapToGrid(x, y)
-      val actual = ApproxViewshed(elevation, col, row)
+      val actual = ApproxViewshed(elevation.tile, col, row)
 
       def countDiff(a: Tile, b: Tile): Int = {
         var ans = 0

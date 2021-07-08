@@ -20,11 +20,10 @@ import geotrellis.raster.io.geotiff.compression.Compression
 import geotrellis.raster._
 import geotrellis.proj4.CRS
 import geotrellis.vector.Extent
-import geotrellis.util._
 import spire.syntax.cfor._
 
 
-trait GeoTiffBuilder[T <: CellGrid] extends Serializable {
+trait GeoTiffBuilder[T <: CellGrid[Int]] extends Serializable {
   /** Make GeoTiff Tile from component segments.
     * Missing segments will be substituted with NODATA.
     * Segments must be keyed relative to (0, 0) offset.
@@ -120,7 +119,7 @@ trait GeoTiffBuilder[T <: CellGrid] extends Serializable {
 }
 
 object GeoTiffBuilder {
-  def apply[T <: CellGrid: GeoTiffBuilder] = implicitly[GeoTiffBuilder[T]]
+  def apply[T <: CellGrid[Int]: GeoTiffBuilder] = implicitly[GeoTiffBuilder[T]]
 
   implicit val singlebandGeoTiffBuilder = new GeoTiffBuilder[Tile] {
     def makeTile(
@@ -141,12 +140,12 @@ object GeoTiffBuilder {
         require(layoutCol < tileLayout.layoutCols, s"col $layoutCol < ${tileLayout.layoutCols}")
         require(layoutRow < tileLayout.layoutRows, s"row $layoutRow < ${tileLayout.layoutRows}")
         val index = tileLayout.layoutCols * layoutRow + layoutCol
-        val bytes = tile.interpretAs(cellType).toBytes
+        val bytes = tile.interpretAs(cellType).toBytes()
         segmentBytes(index) = compressor.compress(bytes, index)
       }
 
       lazy val emptySegment =
-        ArrayTile.empty(cellType, tileLayout.tileCols, tileLayout.tileRows).toBytes
+        ArrayTile.empty(cellType, tileLayout.tileCols, tileLayout.tileRows).toBytes()
 
       cfor (0)(_ < segmentBytes.length, _ + 1){ index =>
         if (null == segmentBytes(index)) {
@@ -156,7 +155,7 @@ object GeoTiffBuilder {
 
       GeoTiffTile(
         new ArraySegmentBytes(segmentBytes),
-        compressor.createDecompressor,
+        compressor.createDecompressor(),
         segmentLayout,
         compression,
         cellType)
@@ -184,14 +183,11 @@ object GeoTiffBuilder {
       val cols = tileLayout.tileCols
       val rows = tileLayout.tileRows
 
-      val segmentCount = tileLayout.layoutCols * tileLayout.layoutRows
-      val compressor = compression.createCompressor(segmentCount)
-
-      val segmentBytes = Array.ofDim[Array[Byte]](segmentCount)
-
-      segmentLayout.interleaveMethod match {
+      val (segmentBytes, compressor) = segmentLayout.interleaveMethod match {
         case PixelInterleave =>
-          val byteCount = cellType.bytes
+          val segmentCount = tileLayout.layoutCols * tileLayout.layoutRows
+          val compressor = compression.createCompressor(segmentCount)
+          val segmentBytes = Array.ofDim[Array[Byte]](segmentCount)
 
           buffered.foreach { case (key, tile) =>
             val layoutCol = key._1
@@ -211,13 +207,31 @@ object GeoTiffBuilder {
               segmentBytes(index) = compressor.compress(emptySegment, index)
           }
 
+          (segmentBytes, compressor)
+
         case BandInterleave =>
-          throw new Exception("Band interleave construction is not supported yet.")
+          val bandSegmentCount = tileLayout.layoutCols * tileLayout.layoutRows
+          val segmentCount = bandSegmentCount * bandCount
+          val compressor = compression.createCompressor(segmentCount)
+          val segmentBytes = Array.ofDim[Array[Byte]](segmentCount)
+
+          buffered.foreach { case (key, tile)  =>
+            cfor(0)( _ < tile.bandCount, _ + 1) { bandIndex =>
+              val layoutCol = key._1
+              val layoutRow = key._2
+              val bandSegmentOffset = bandSegmentCount * bandIndex
+              val index = tileLayout.layoutCols * layoutRow + layoutCol + bandSegmentOffset
+              val bytes = tile.band(bandIndex).interpretAs(cellType).toBytes()
+              segmentBytes(index) = compressor.compress(bytes, index)
+            }
+          }
+
+          (segmentBytes, compressor)
       }
 
       GeoTiffMultibandTile(
         new ArraySegmentBytes(segmentBytes),
-        compressor.createDecompressor,
+        compressor.createDecompressor(),
         segmentLayout,
         compression,
         bandCount,

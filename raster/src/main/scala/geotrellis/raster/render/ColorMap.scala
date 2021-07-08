@@ -16,11 +16,11 @@
 
 package geotrellis.raster.render
 
-import geotrellis.raster._
 import geotrellis.raster.histogram.Histogram
-import geotrellis.util._
 import spire.syntax.cfor._
 import spire.std.any._
+import _root_.io.circe._
+import geotrellis.raster.{ArrayTile, IntCellType, Tile, d2i, i2d, isNoData}
 
 import scala.util.Try
 
@@ -229,7 +229,7 @@ class IntColorMap(breaksToColors: Map[Int, Int], val options: Options = Options.
     new IntColorMap(breaksToColors, options.copy(classBoundaryType = classBoundaryType))
 
   def cache(h: Histogram[Int]): ColorMap = {
-    val ch = h.mutable
+    val ch = h.mutable()
     val cachedColors = h.values()
     cfor(0)( _ < cachedColors.length, _ + 1) { i =>
       val z = cachedColors(i)
@@ -270,14 +270,14 @@ class IntCachedColorMap(val colors: Vector[Int], h: Histogram[Int], val options:
   def mapDouble(z: Double): Int = map(d2i(z))
 
   def mapColors(f: Int => Int): ColorMap = {
-    val ch = h.mutable
+    val ch = h.mutable()
     h.foreachValue(z => ch.setItem(z, f(h.itemCount(z).toInt)))
     new IntCachedColorMap(colors, ch, options)
   }
 
   def mapColorsToIndex(): ColorMap = {
     val colorIndexMap = colors.zipWithIndex.toMap
-    val ch = h.mutable
+    val ch = h.mutable()
 
     h.foreachValue(z => ch.setItem(z, colorIndexMap(h.itemCount(z).toInt)))
     new IntCachedColorMap((0 to colors.length).toVector, ch, options)
@@ -348,10 +348,10 @@ class DoubleColorMap(breaksToColors: Map[Double, Int], val options: Options = Op
 /** A color map where the breaks are monotonically increasing integer values starting at zero.
  * Primarily used for capturing and persisting indexed color maps in GeoTIFFs. */
 class IndexedColorMap(indexedColors: Seq[Int]) extends IntColorMap(
-  indexedColors.zipWithIndex.map(p ⇒ p._2 -> p._1).toMap
+  indexedColors.zipWithIndex.map(p => p._2 -> p._1).toMap
 ) {
   override def toString = getClass.getSimpleName + "(" +
-    colors.map(c ⇒ f"0x$c%02x").mkString(", ") + ")"
+    colors.map(c => f"0x$c%02x").mkString(", ") + ")"
 }
 
 object IndexedColorMap {
@@ -364,12 +364,22 @@ object IndexedColorMap {
 
   /** Creates an IndexColorMap from sequence of RGB short values. */
   def fromTiffPalette(tiffPalette: Seq[(Short, Short, Short)]) = new IndexedColorMap(
-    tiffPalette.map { case (red, green, blue) ⇒ RGB(downsample(red), downsample(green), downsample(blue))}
+    tiffPalette.map { case (red, green, blue) => RGB(downsample(red), downsample(green), downsample(blue))}
   )
   /** Converts a ColorMap to sequence of short triplets in encoding expected by GeoTiff 'Palette' color space.*/
   def toTiffPalette(cm: ColorMap): Seq[(Short, Short, Short)] =
-    fromColorMap(cm).colors.map(c ⇒ (upsample(c.red), upsample(c.green), upsample(c.blue)))
+    fromColorMap(cm).colors.map { c =>
+      val rgba = RGBA(c)
+      (upsample(rgba.red), upsample(rgba.green), upsample(rgba.blue))
+    }
 
   /** Flattens the given colormap into an indexed variant, throwing away any defined boundaries. */
   def fromColorMap(cm: ColorMap) = new IndexedColorMap(cm.colors)
+
+  implicit val indexedColorMapDecoder: Decoder[IndexedColorMap] =
+    Decoder.decodeSeq[Int].emap { s =>
+      Right(new IndexedColorMap(s))
+    }
+  implicit val indexedColorMapEncoder: Encoder[IndexedColorMap] =
+    Encoder.encodeSeq[Int].contramapArray(_.colors.toSeq)
 }

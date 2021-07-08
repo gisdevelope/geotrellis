@@ -16,20 +16,17 @@
 
 package geotrellis.spark.viewshed
 
-import geotrellis.proj4.LatLng
 import geotrellis.raster._
-import geotrellis.raster.rasterize.Rasterizer
 import geotrellis.raster.viewshed.R2Viewshed
 import geotrellis.raster.viewshed.R2Viewshed._
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.util._
+import geotrellis.spark.costdistance.IterativeCostDistance._
 import geotrellis.vector._
 
-import com.vividsolutions.jts.{ geom => jts }
+import org.locationtech.jts.{geom => jts}
 import org.apache.log4j.Logger
 import org.apache.spark.rdd.RDD
-import org.apache.spark.SparkContext
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.util.AccumulatorV2
 
@@ -66,7 +63,7 @@ case class Viewpoint(
 object IterativeViewshed {
 
   implicit def coordinatesToPoints(points: Seq[jts.Coordinate]): Seq[Viewpoint] =
-    points.map({ p => Viewpoint(p.x, p.y, p.z, 0, -1.0, Double.NegativeInfinity) })
+    points.map({ p => Viewpoint(p.getX, p.getY, p.getZ, 0, -1.0, Double.NegativeInfinity) })
 
   private val logger = Logger.getLogger(IterativeViewshed.getClass)
 
@@ -87,7 +84,7 @@ object IterativeViewshed {
   private class RayCatcher extends AccumulatorV2[Message, Messages] {
     private val messages = mutable.Map.empty[SpatialKey, List[Message]]
 
-    def copy: RayCatcher = {
+    def copy(): RayCatcher = {
       val other = new RayCatcher
       other.merge(this)
       other
@@ -115,29 +112,13 @@ object IterativeViewshed {
             key -> lists.map({ case (_, m) => m }).reduce(_ ++ _)
           })
 
-        messages.clear
+        messages.clear()
         messages ++= newMessages
      }
 
-    def reset: Unit = this.synchronized { messages.clear }
+    def reset(): Unit = this.synchronized { messages.clear() }
 
     def value: Messages = messages.toMap
-  }
-
-  /**
-    * Compute the resolution (in meters per pixel) of a layer.
-    */
-  private def computeResolution[K: (? => SpatialKey), V: (? => Tile)](
-    elevation: RDD[(K, V)] with Metadata[TileLayerMetadata[K]]
-  ) = {
-    val md = elevation.metadata
-    val mt = md.mapTransform
-    val key: SpatialKey = md.bounds.get.minKey
-    val extent = mt(key).reproject(md.crs, LatLng)
-    val degrees = extent.xmax - extent.xmin
-    val meters = degrees * (6378137 * 2.0 * math.Pi) / 360.0
-    val pixels = md.layout.tileCols
-    math.abs(meters / pixels)
   }
 
   private case class PointInfo(
@@ -154,7 +135,7 @@ object IterativeViewshed {
   /**
     * Elaborate a point with information from the layer.
     */
-  private def pointInfo[K: (? => SpatialKey), V: (? => Tile)](
+  private def pointInfo[K: * => SpatialKey, V: * => Tile](
     rdd: RDD[(K, V)] with Metadata[TileLayerMetadata[K]])(
     pi: (Viewpoint, Int)
   )= {
@@ -199,14 +180,16 @@ object IterativeViewshed {
     * @param  curvature    Whether or not to take the curvature of the Earth into account
     * @param  operator     The aggregation operator to use (e.g. Or)
     * @param  epsilon      Rays within this many radians of horizontal (vertical) are considered to be horizontal (vertical)
+    * @param  scatter      Whether to allow light to move (one pixel) normal to the ray
     */
-  def apply[K: (? => SpatialKey): ClassTag, V: (? => Tile)](
+  def apply[K: * => SpatialKey: ClassTag, V: * => Tile](
     elevation: RDD[(K, V)] with Metadata[TileLayerMetadata[K]],
     ps: Seq[Viewpoint],
     maxDistance: Double,
     curvature: Boolean = true,
     operator: AggregationOperator = Or,
-    epsilon: Double = (1/math.Pi)
+    epsilon: Double = (1/math.Pi),
+    scatter: Boolean = true
   ): RDD[(K, Tile)] with Metadata[TileLayerMetadata[K]] = {
 
     val sparkContext = elevation.sparkContext
@@ -293,7 +276,7 @@ object IterativeViewshed {
             case None => Seq.empty[(Int, Double)]
           }
         })
-        .collect
+        .collect()
         .toMap
     val heightsByIndex = sparkContext.broadcast(_heightsByIndex)
 
@@ -321,7 +304,9 @@ object IterativeViewshed {
               altitude = alt,
               operator = operator,
               cameraDirection = ang,
-              cameraFOV = fov
+              cameraFOV = fov,
+              epsilon = epsilon,
+              scatter = scatter
             )
           })
         case None =>
@@ -329,7 +314,7 @@ object IterativeViewshed {
 
       (k, v, shed)
     }).persist(StorageLevel.MEMORY_AND_DISK_SER)
-    sheds.count // make sheds materialize
+    sheds.count() // make sheds materialize
 
     // Repeatedly map over the RDD of viewshed tiles until all rays
     // have reached the periphery of the layer.
@@ -342,7 +327,7 @@ object IterativeViewshed {
           .toMap
       val changes = sparkContext.broadcast(_changes)
 
-      rays.reset
+      rays.reset()
       logger.debug(s"≥ ${changes.value.size} tiles in motion")
 
       val oldSheds = sheds
@@ -394,7 +379,8 @@ object IterativeViewshed {
                     altitude = alt,
                     cameraDirection = angle,
                     cameraFOV = fov,
-                    epsilon = epsilon
+                    epsilon = epsilon,
+                    scatter = scatter
                   )
                 }
                 i += 1;
@@ -406,7 +392,7 @@ object IterativeViewshed {
         }
         (k, v, shed)
       }).persist(StorageLevel.MEMORY_AND_DISK_SER)
-      sheds.count
+      sheds.count()
       oldSheds.unpersist()
 
     } while (rays.value.nonEmpty)

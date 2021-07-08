@@ -16,9 +16,6 @@
 
 package geotrellis.raster
 
-import geotrellis.proj4.CRS
-import geotrellis.raster.reproject._
-import geotrellis.raster.resample._
 import geotrellis.vector._
 
 
@@ -26,13 +23,14 @@ import geotrellis.vector._
   * The companion object for the [[Raster]] type.
   */
 object Raster {
-  def apply[T <: CellGrid](feature: PolygonFeature[T]): Raster[T] =
-    Raster(feature.data, feature.geom.envelope)
+  def apply[T <: CellGrid[Int]](feature: PolygonFeature[T]): Raster[T] =
+    Raster(feature.data, feature.geom.extent)
 
   /**
     * Implicit conversion from a [[Tile]], Extent pair to a
     * [[Raster]].
     */
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
   implicit def tupToRaster(tup: (Tile, Extent)): Raster[Tile] =
     Raster(tup._1, tup._2)
 
@@ -40,32 +38,29 @@ object Raster {
     * Implicit conversion from an Extent, [[Tile]] pair to a
     * [[Raster]].
     */
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
   implicit def tupSwapToRaster(tup: (Extent, Tile)): Raster[Tile] =
     Raster(tup._2, tup._1)
 
   /**
-    * Implicit conversion from a [[Raster]] to a [[CellGrid]].
-    */
-  implicit def rasterToTile[T <: CellGrid](r: Raster[T]): T =
-    r.tile
-
-  /**
     * Implicit conversion from a [[Raster]] to a PolygonFeature.
     */
-  implicit def rasterToFeature[T <: CellGrid](r: Raster[T]): PolygonFeature[T] =
-    r.asFeature
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
+  implicit def rasterToFeature[T <: CellGrid[Int]](r: Raster[T]): PolygonFeature[T] =
+    r.asFeature()
 
   /**
     * Implicit conversion from a PolygonFeature to a [[Raster]].
     */
-  implicit def featureToRaster[T <: CellGrid](feature: PolygonFeature[T]): Raster[T] =
+  @deprecated("Implicit conversions considered unsafe", "2.1.1")
+  implicit def featureToRaster[T <: CellGrid[Int]](feature: PolygonFeature[T]): Raster[T] =
      apply(feature)
 }
 
 /**
   * The [[Raster]] type.
   */
-case class Raster[+T <: CellGrid](tile: T, extent: Extent) extends Product2[T, Extent] with CellGrid {
+case class Raster[+T <: CellGrid[Int]](tile: T, extent: Extent) extends CellGrid[Int] with Product2[T, Extent] {
 
   /**
     * Return the [[RasterExtent]] that is correspondent to this
@@ -86,9 +81,9 @@ case class Raster[+T <: CellGrid](tile: T, extent: Extent) extends Product2[T, E
     * Return the PolygonFeature associated with the extent of this
     * [[Raster]].
     */
-  def asFeature(): PolygonFeature[T] = PolygonFeature(extent.toPolygon, tile: T)
+  def asFeature(): PolygonFeature[T] = PolygonFeature(extent.toPolygon(), tile: T)
 
-  def mapTile[A <: CellGrid](f: T => A): Raster[A] = Raster(f(tile), extent)
+  def mapTile[A <: CellGrid[Int]](f: T => A): Raster[A] = Raster(f(tile), extent)
 
   def _1: T = tile
 

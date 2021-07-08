@@ -18,11 +18,8 @@ package geotrellis.raster.io.geotiff
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.compression._
-import geotrellis.raster.resample.ResampleMethod
 import geotrellis.raster.split._
-import geotrellis.vector.Extent
 
-import java.util.BitSet
 
 import spire.syntax.cfor._
 
@@ -267,14 +264,14 @@ object GeoTiffTile {
     val compressor = options.compression.createCompressor(segmentCount)
 
     val segmentBytes = Array.ofDim[Array[Byte]](segmentCount)
-    val segmentTiles =
+    val segmentTiles: Seq[Tile] =
       options.storageMethod match {
         case _: Tiled => tile.split(segmentLayout.tileLayout)
         case _: Striped => tile.split(segmentLayout.tileLayout, Split.Options(extend = false))
       }
 
     cfor(0)(_ < segmentCount, _ + 1) { i =>
-      val bytes = segmentTiles(i).toBytes
+      val bytes = segmentTiles(i).toBytes()
       segmentBytes(i) = compressor.compress(bytes, i)
     }
 
@@ -288,7 +285,7 @@ object GeoTiffTile {
       }
     }
 
-    apply(new ArraySegmentBytes(segmentBytes), compressor.createDecompressor, segmentLayout, options.compression, tile.cellType)
+    apply(new ArraySegmentBytes(segmentBytes), compressor.createDecompressor(), segmentLayout, options.compression, tile.cellType)
   }
 }
 
@@ -317,9 +314,6 @@ abstract class GeoTiffTile(
    * @return A new [[Tile]] that contains the new CellTypes
    */
   def convert(newCellType: CellType): GeoTiffTile = {
-    if(newCellType.isFloatingPoint != cellType.isFloatingPoint)
-      logger.warn(s"Conversion from $cellType to $newCellType may lead to data loss.")
-
     val arr = Array.ofDim[Array[Byte]](segmentCount)
     val compressor = compression.createCompressor(segmentCount)
 
@@ -619,7 +613,7 @@ abstract class GeoTiffTile(
           compressor.createDecompressor(),
           segmentLayout,
           compression,
-          cellType,
+          cellType.union(other.cellType),
           overviews = overviews
         )
       case _ =>
@@ -672,7 +666,7 @@ abstract class GeoTiffTile(
    * @return An Array[Int] that conatains all of the values in the tile
    */
   def toArray(): Array[Int] =
-    toArrayTile.toArray
+    toArrayTile().toArray()
 
   /**
    * Converts the given implementation to an Array
@@ -680,7 +674,7 @@ abstract class GeoTiffTile(
    * @return An Array[Double] that conatains all of the values in the tile
    */
   def toArrayDouble(): Array[Double] =
-    toArrayTile.toArrayDouble
+    toArrayTile().toArrayDouble()
 
   /**
    * Converts GeoTiffTile to an ArrayTile
@@ -729,10 +723,10 @@ abstract class GeoTiffTile(
    *
    * @param bounds: Pixel bounds specifying the crop area
    */
-  def crop(bounds: GridBounds): MutableArrayTile = {
+  def crop(bounds: GridBounds[Int]): MutableArrayTile = {
     val iter = crop(List(bounds))
-    if(iter.isEmpty) throw GeoAttrsError(s"No intersections of ${bounds} vs ${gridBounds}")
-    else iter.next._2
+    if(iter.isEmpty) throw GeoAttrsError(s"No intersections of ${bounds} vs ${dimensions}")
+    else iter.next()._2
   }
 
   /**
@@ -740,9 +734,9 @@ abstract class GeoTiffTile(
     *
     * @param windows: Pixel bounds specifying the crop areas
     */
-  def crop(windows: Seq[GridBounds]): Iterator[(GridBounds, MutableArrayTile)] = {
+  def crop(windows: Seq[GridBounds[Int]]): Iterator[(GridBounds[Int], MutableArrayTile)] = {
     case class Chip(
-      window: GridBounds,
+      window: GridBounds[Int],
       tile: MutableArrayTile,
       intersectingSegments: Int,
       var segmentsBurned: Int = 0
@@ -808,5 +802,7 @@ abstract class GeoTiffTile(
    * @return An Array[Byte] of the GeoTiffTile
    */
   def toBytes(): Array[Byte] =
-    toArrayTile.toBytes
+    toArrayTile().toBytes()
+
+  override def toString: String = s"GeoTiffTile($cols,$rows,$cellType)"
 }

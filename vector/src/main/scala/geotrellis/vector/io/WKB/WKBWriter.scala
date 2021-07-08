@@ -16,12 +16,12 @@
 
 package geotrellis.vector.io.wkb
 
+import geotrellis.vector._
+import org.locationtech.jts.io.{ByteOrderValues, OutStream, OutputStreamOutStream}
+import org.locationtech.jts.geom.{Coordinate, CoordinateSequence}
+
 import java.io.ByteArrayOutputStream
 import java.util.Locale
-import com.vividsolutions.jts.io.{ByteOrderValues, OutStream, OutputStreamOutStream}
-import geotrellis.vector._
-import com.vividsolutions.jts.{geom => jts}
-import com.vividsolutions.jts.geom.{Coordinate, CoordinateSequence}
 
 /** Constant values used by the WKB format */
 object WKBConstants {
@@ -48,7 +48,7 @@ object WKBWriter {
   def toHex(bytes: Array[Byte]): String  =  bytes.map(b => "%02x".formatLocal(Locale.ENGLISH, b)).mkString
 }
 
-/** Ported from JTS WKBWriter [[package com.vividsolutions.jts.io.WKBWriter]]
+/** Ported from JTS WKBWriter [[package org.locationtech.jts.io.WKBWriter]]
   *
   * @author Martin Davis
   */
@@ -75,7 +75,7 @@ class WKBWriter(outputDimension: Int, byteOrder: Int) {
   def write(geom: Geometry, srid: Option[Int] = None): Array[Byte] = {
     byteArrayOS.reset()
     this.srid = srid
-    write(geom.jtsGeom, byteArrayOutStream)
+    write(geom, byteArrayOutStream)
     byteArrayOS.toByteArray
   }
 
@@ -85,53 +85,53 @@ class WKBWriter(outputDimension: Int, byteOrder: Int) {
     * @param os the out stream to write to
     * @throws IOException if an I/O error occurs
     */
-  private def write(geom: jts.Geometry, os: OutStream) {
+  private def write(geom: Geometry, os: OutStream): Unit = {
     geom match {
-      case g: jts.Point => writePoint(g, os)
-      case g: jts.LineString => writeLineString(g, os)
-      case g: jts.Polygon => writePolygon(g, os)
-      case g: jts.MultiPoint => writeGeometryCollection(WKBConstants.wkbMultiPoint, g, os)
-      case g: jts.MultiLineString => writeGeometryCollection(WKBConstants.wkbMultiLineString, g, os)
-      case g: jts.MultiPolygon => writeGeometryCollection(WKBConstants.wkbMultiPolygon, g, os)
-      case g: jts.GeometryCollection => write(g, os)
+      case g: Point => writePoint(g, os)
+      case g: LineString => writeLineString(g, os)
+      case g: Polygon => writePolygon(g, os)
+      case g: MultiPoint => writeGeometryCollection(WKBConstants.wkbMultiPoint, g, os)
+      case g: MultiLineString => writeGeometryCollection(WKBConstants.wkbMultiLineString, g, os)
+      case g: MultiPolygon => writeGeometryCollection(WKBConstants.wkbMultiPolygon, g, os)
+      case g: GeometryCollection => write(g, os)
       case _ => sys.error("Unknown Geometry type")
     }
   }
 
-  private def writePoint(pt: Point, os: OutStream) {
-    if (pt.jtsGeom.getCoordinateSequence.size() == 0)
+  private def writePoint(pt: Point, os: OutStream): Unit = {
+    if (pt.getCoordinateSequence.size() == 0)
       throw new IllegalArgumentException("Empty Points cannot be represented in WKB")
     writeByteOrder(os)
     writeGeometryType(WKBConstants.wkbPoint, pt, os)
-    writeCoordinateSequence(pt.jtsGeom.getCoordinateSequence, false, os)
+    writeCoordinateSequence(pt.getCoordinateSequence, false, os)
   }
 
-  private def writeLineString(line: Line, os: OutStream) {
+  private def writeLineString(line: LineString, os: OutStream): Unit = {
     writeByteOrder(os)
     writeGeometryType(WKBConstants.wkbLineString, line, os)
-    writeCoordinateSequence(line.jtsGeom.getCoordinateSequence, true, os)
+    writeCoordinateSequence(line.getCoordinateSequence, true, os)
   }
 
-  private def writePolygon(poly: Polygon, os: OutStream)
+  private def writePolygon(poly: Polygon, os: OutStream): Unit =
   {
     writeByteOrder(os)
     writeGeometryType(WKBConstants.wkbPolygon, poly, os)
-    writeInt(poly.jtsGeom.getNumInteriorRing + 1, os)
-    writeCoordinateSequence(poly.jtsGeom.getExteriorRing.getCoordinateSequence, true, os)
-    for (i <- 0 until poly.jtsGeom.getNumInteriorRing){
-      writeCoordinateSequence(poly.jtsGeom.getInteriorRingN(i).getCoordinateSequence, true, os)
+    writeInt(poly.getNumInteriorRing + 1, os)
+    writeCoordinateSequence(poly.getExteriorRing.getCoordinateSequence, true, os)
+    for (i <- 0 until poly.getNumInteriorRing){
+      writeCoordinateSequence(poly.getInteriorRingN(i).getCoordinateSequence, true, os)
     }
   }
 
-  private def writeGeometryCollection(geometryType: Int, gc: GeometryCollection, os: OutStream) {
+  private def writeGeometryCollection(geometryType: Int, gc: GeometryCollection, os: OutStream): Unit = {
     writeByteOrder(os)
     writeGeometryType(geometryType, gc, os)
-    writeInt(gc.jtsGeom.getNumGeometries, os)
-    for (i <- 0 until gc.jtsGeom.getNumGeometries)
-      write(gc.jtsGeom.getGeometryN(i), os)
+    writeInt(gc.getNumGeometries, os)
+    for (i <- 0 until gc.getNumGeometries)
+      write(gc.getGeometryN(i), os)
   }
 
-  private def writeByteOrder(os: OutStream) {
+  private def writeByteOrder(os: OutStream): Unit = {
     if (byteOrder == ByteOrderValues.LITTLE_ENDIAN)
       buf(0) = WKBConstants.wkbNDR
     else
@@ -139,7 +139,7 @@ class WKBWriter(outputDimension: Int, byteOrder: Int) {
     os.write(buf, 1)
   }
 
-  private def writeGeometryType(geometryType: Int, g: Geometry, os: OutStream ) {
+  private def writeGeometryType(geometryType: Int, g: Geometry, os: OutStream ): Unit = {
     val flag3D = if (outputDimension == 3)  0x80000000 else 0
     srid match {
       case Some(srid: Int) =>
@@ -152,12 +152,12 @@ class WKBWriter(outputDimension: Int, byteOrder: Int) {
     }
   }
 
-  private def writeInt(intValue: Int, os: OutStream) {
+  private def writeInt(intValue: Int, os: OutStream): Unit = {
     ByteOrderValues.putInt(intValue, buf, byteOrder)
     os.write(buf, 4)
   }
 
-  private def writeCoordinate(seq: CoordinateSequence, index: Int, os: OutStream) {
+  private def writeCoordinate(seq: CoordinateSequence, index: Int, os: OutStream): Unit = {
     ByteOrderValues.putDouble(seq.getX(index), buf, byteOrder)
     os.write(buf, 8)
     ByteOrderValues.putDouble(seq.getY(index), buf, byteOrder)
@@ -174,7 +174,7 @@ class WKBWriter(outputDimension: Int, byteOrder: Int) {
     }
   }
 
-  private def writeCoordinateSequence(seq: CoordinateSequence, writeSize: Boolean, os: OutStream) {
+  private def writeCoordinateSequence(seq: CoordinateSequence, writeSize: Boolean, os: OutStream): Unit = {
     if (writeSize) writeInt(seq.size(), os)
     for (i <- 0 until seq.size()) writeCoordinate(seq, i, os)
   }

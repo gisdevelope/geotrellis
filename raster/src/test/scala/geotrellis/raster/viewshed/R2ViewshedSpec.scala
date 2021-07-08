@@ -20,13 +20,10 @@ import geotrellis.raster._
 import geotrellis.raster.testkit._
 import geotrellis.raster.viewshed.R2Viewshed._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-
-class R2ViewshedSpec extends FunSpec
-    with Matchers
-    with RasterMatchers with TestFiles
-    with TileBuilders {
+class R2ViewshedSpec extends AnyFunSpec with Matchers with RasterMatchers with TestFiles with TileBuilders {
 
   describe("Viewshed") {
 
@@ -60,7 +57,8 @@ class R2ViewshedSpec extends FunSpec
         resolution = 1,
         maxDistance = Double.PositiveInfinity,
         curvature = false,
-        operator = Or
+        operator = Or,
+        scatter = false
       )
 
       a should be (6)
@@ -98,7 +96,8 @@ class R2ViewshedSpec extends FunSpec
         resolution = 1,
         maxDistance = Double.PositiveInfinity,
         curvature = false,
-        operator = Or
+        operator = Or,
+        scatter = false
       )
 
       a should be (6)
@@ -136,7 +135,8 @@ class R2ViewshedSpec extends FunSpec
         resolution = 1,
         maxDistance = Double.PositiveInfinity,
         curvature = false,
-        operator = Or
+        operator = Or,
+        scatter = false
       )
 
       a should be (6)
@@ -174,7 +174,8 @@ class R2ViewshedSpec extends FunSpec
         resolution = 1,
         maxDistance = Double.PositiveInfinity,
         curvature = false,
-        operator = Or
+        operator = Or,
+        scatter = false
       )
 
       a should be (6)
@@ -209,10 +210,51 @@ class R2ViewshedSpec extends FunSpec
         curvature = false,
         operator = Or,
         cameraDirection = 0,
-        cameraFOV = math.cos(math.Pi/4)
+        cameraFOV = math.cos(math.Pi/4),
+        scatter = false
       )
 
       assertEqual(actual, expected)
+    }
+
+    // ---------------------------------
+
+    it("Sees more when scattering is enabled") {
+      val elevation = createTile(Array.fill(7 * 7)(1), 7, 7)
+      val noScatter = ArrayTile.empty(IntCellType, 7, 7)
+      val yesScatter = ArrayTile.empty(IntCellType, 7, 7)
+
+      R2Viewshed.compute(
+        elevation, noScatter,
+        3, 3, 1,
+        FromInside,
+        null,
+        { _ => },
+        resolution = 1,
+        maxDistance = Double.PositiveInfinity,
+        curvature = false,
+        operator = Or,
+        cameraDirection = 0,
+        cameraFOV = math.cos(math.Pi/4),
+        scatter = false
+      )
+
+      R2Viewshed.compute(
+        elevation, yesScatter,
+        3, 3, 1,
+        FromInside,
+        null,
+        { _ => },
+        resolution = 1,
+        maxDistance = Double.PositiveInfinity,
+        curvature = false,
+        operator = Or,
+        cameraDirection = 0,
+        cameraFOV = math.cos(math.Pi/4),
+        scatter = true
+      )
+
+      (noScatter.toArray().sum) should be < (yesScatter.toArray().sum)
     }
 
     // ---------------------------------
@@ -243,7 +285,8 @@ class R2ViewshedSpec extends FunSpec
         curvature = false,
         operator = Or,
         cameraDirection = 0,
-        cameraFOV = -1
+        cameraFOV = -1,
+        scatter = false
       )
 
       R2Viewshed.compute(
@@ -258,7 +301,8 @@ class R2ViewshedSpec extends FunSpec
         operator = Or,
         altitude = 2,
         cameraDirection = 0,
-        cameraFOV = -1
+        cameraFOV = -1,
+        scatter = false
       )
 
       R2Viewshed.compute(
@@ -273,12 +317,13 @@ class R2ViewshedSpec extends FunSpec
         operator = Or,
         altitude = 3,
         cameraDirection = 0,
-        cameraFOV = -1
+        cameraFOV = -1,
+        scatter = false
       )
 
-      val lowCount = low.toArray.sum
-      val mediumCount = medium.toArray.sum
-      val hiCount = hi.toArray.sum
+      val lowCount = low.toArray().sum
+      val mediumCount = medium.toArray().sum
+      val hiCount = hi.toArray().sum
 
       lowCount should be (33)
       mediumCount should be (40)
@@ -479,7 +524,7 @@ class R2ViewshedSpec extends FunSpec
       val rs = loadTestArg("data/viewshed-elevation")
       val elevation = rs.tile
       val rasterExtent = rs.rasterExtent
-      val expected = loadTestArg("data/viewshed-expected")
+      val expected = loadTestArg("data/viewshed-expected").tile
 
       val (x, y) = (-93.63300872055451407, 30.54649743277299123) // create overload
       val (col, row) = rasterExtent.mapToGrid(x, y)
@@ -507,7 +552,7 @@ class R2ViewshedSpec extends FunSpec
       val rs = loadTestArg("data/viewshed-elevation")
       val elevation = rs.tile
       val rasterExtent = rs.rasterExtent
-      val expected = loadTestArg("data/viewshed-expected")
+      val expected = loadTestArg("data/viewshed-expected").tile
 
       val (x, y) = (-93.63300872055451407, 30.54649743277299123) // create overload
       val (col, row) = rasterExtent.mapToGrid(x, y)

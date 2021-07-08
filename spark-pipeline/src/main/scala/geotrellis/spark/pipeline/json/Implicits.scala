@@ -22,19 +22,20 @@ import geotrellis.spark.pipeline.json.reindex._
 import geotrellis.spark.pipeline.json.update._
 import geotrellis.spark.pipeline.json.transform._
 import geotrellis.proj4.CRS
+import geotrellis.layer._
 import geotrellis.spark.pipeline._
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.spark.tiling._
-import geotrellis.vector._
-import geotrellis.util.LazyLogging
 
 import _root_.io.circe.generic.extras.Configuration
 import _root_.io.circe._
 import _root_.io.circe.syntax._
 import _root_.io.circe.generic.extras.semiauto._
-import cats.syntax._
-import cats.implicits._
+import cats.syntax.either._
+import cats.syntax.apply._
+import cats.syntax.bifoldable._
+import cats.instances.option._
+import cats.instances.either._
 
 import java.net.URI
 
@@ -42,7 +43,7 @@ import scala.util.Try
 
 object Implicits extends Implicits
 
-trait Implicits extends LazyLogging {
+trait Implicits {
   implicit val config: Configuration = Configuration.default.withDefaults.withSnakeCaseMemberNames
   val pipelineJsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
 
@@ -60,21 +61,6 @@ trait Implicits extends LazyLogging {
     Decoder.decodeString.emap { str =>
       Either.catchNonFatal(Try(CRS.fromName(str)) getOrElse CRS.fromString(str)).leftMap(_ => "CRS")
     }
-
-  implicit val extentEncoder: Encoder[Extent] =
-    new Encoder[Extent] {
-      final def apply(extent: Extent): Json =
-        List(extent.xmin, extent.ymin, extent.xmax, extent.ymax).asJson
-    }
-  implicit val extentDecoder: Decoder[Extent] =
-    Decoder[Json] emap { js =>
-      (js.as[List[Double]]: Either[DecodingFailure, List[Double]]).map { case List(xmin, ymin, xmax, ymax) =>
-        Extent(xmin, ymin, xmax, ymax)
-      }.leftMap(_ => "Extent")
-    }
-
-  implicit val tileLayoutEncoder: Encoder[TileLayout] = deriveEncoder
-  implicit val tileLayoutDecoder: Decoder[TileLayout] = deriveDecoder
 
   implicit val layoutDefinitionEncoder: Encoder[LayoutDefinition] = deriveEncoder
   implicit val layoutDefinitionDecoder: Decoder[LayoutDefinition] = deriveDecoder
@@ -155,7 +141,7 @@ trait Implicits extends LazyLogging {
     Decoder.decodeJsonObject.emap { jso: JsonObject =>
       val map = jso.toMap
       val cellSize = ((map.get("width"), map.get("height")) mapN {
-        (w, h) => (new EitherOps(w.as[Double]).toOption, new EitherOps(h.as[Double]).toOption) mapN {
+        (w, h) => (w.as[Double].toOption, h.as[Double].toOption) mapN {
           (width, height) => CellSize(width, height)
         }
       }).flatten

@@ -17,12 +17,13 @@
 package geotrellis.raster.hydrology
 
 import geotrellis.raster._
-import org.scalatest._
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 import geotrellis.raster.testkit._
 
-class FlowDirectionSpec extends FunSpec with Matchers 
-                                        with RasterMatchers 
-                                        with TileBuilders {
+class FlowDirectionSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("FlowDirection") {
 
     // Note: Sinks are not autmatically filled, so sinks are always going to have NODATA for direction
@@ -75,7 +76,7 @@ class FlowDirectionSpec extends FunSpec with Matchers
                                  NODATA,64,16,
                                       1,64,32),
                             ncols,nrows)
-       val computed = e.flowDirection
+       val computed = e.flowDirection()
       assertEqual(computed, m)
     }
   }}

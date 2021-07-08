@@ -16,15 +16,16 @@
 
 package geotrellis.spark.util
 
-import geotrellis.util.LazyLogging
-
+import org.log4s._
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.SparkConf
 import org.apache.spark.SparkContext
 
 import java.io.File
 
-object SparkUtils extends LazyLogging {
+object SparkUtils {
+  @transient private[this] lazy val logger = getLogger
+
   def createSparkConf = new SparkConf()
 
   private val gtHomeLock = new Object()
@@ -47,7 +48,7 @@ object SparkUtils extends LazyLogging {
       .setMaster(sparkMaster)
       .setAppName(appName)
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .set("spark.kryo.registrator", classOf[geotrellis.spark.io.kryo.KryoRegistrator].getName)
+      .set("spark.kryo.registrator", classOf[geotrellis.spark.store.kryo.KryoRegistrator].getName)
 
     new SparkContext(sparkConf)
   }
@@ -59,7 +60,7 @@ object SparkUtils extends LazyLogging {
     sparkConf
       .setAppName(appName)
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-      .set("spark.kryo.registrator", classOf[geotrellis.spark.io.kryo.KryoRegistrator].getName)
+      .set("spark.kryo.registrator", classOf[geotrellis.spark.store.kryo.KryoRegistrator].getName)
 
     new SparkContext(sparkConf)
   }

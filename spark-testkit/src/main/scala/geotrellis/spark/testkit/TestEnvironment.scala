@@ -16,15 +16,16 @@
 
 package geotrellis.spark.testkit
 
-import geotrellis.spark.io.hadoop.HdfsUtils
+import geotrellis.store.hadoop.util.HdfsUtils
 import geotrellis.spark.util.SparkUtils
-import geotrellis.spark.io.kryo.KryoRegistrator
+import geotrellis.spark.store.kryo.KryoRegistrator
 
 import org.apache.hadoop.fs.FileSystem
 import org.apache.hadoop.fs.FileUtil
 import org.apache.hadoop.fs.Path
 import org.apache.hadoop.conf.Configuration
 import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.serializer.KryoSerializer
 import org.scalatest._
 import org.scalatest.BeforeAndAfterAll
@@ -54,7 +55,7 @@ trait TestEnvironment extends BeforeAndAfterAll
 { self: Suite with BeforeAndAfterAll =>
 
   /** Subclasses can override this to change the Spark master specification */
-  def sparkMaster = "local"
+  def sparkMaster = "local[2]"
 
   private lazy val afterAlls = mutable.ListBuffer[() => Unit]()
   def registerAfterAll(f: () => Unit): Unit =
@@ -63,7 +64,7 @@ trait TestEnvironment extends BeforeAndAfterAll
   def setKryoRegistrator(conf: SparkConf): Unit =
     conf.set("spark.kryo.registrator", classOf[KryoRegistrator].getName)
 
-  lazy val _sc: SparkContext = {
+  lazy val _ssc: SparkSession = {
     System.setProperty("spark.driver.port", "0")
     System.setProperty("spark.hostPort", "0")
     System.setProperty("spark.ui.enabled", "false")
@@ -73,6 +74,9 @@ trait TestEnvironment extends BeforeAndAfterAll
       .setMaster(sparkMaster)
       .setAppName("Test Context")
       .set("spark.default.parallelism", "4")
+      // Since Spark 3.2.0 this flag is set to true by default
+      // We need it to be set to false, since it is required by the HBase TableInputFormat
+      .set("spark.hadoopRDD.ignoreEmptySplits", "false")
 
     // Shortcut out of using Kryo serialization if we want to test against
     // java serialization.
@@ -84,7 +88,7 @@ trait TestEnvironment extends BeforeAndAfterAll
       setKryoRegistrator(conf)
     }
 
-    val sparkContext = new SparkContext(conf)
+    val sparkContext = SparkSession.builder().config(conf).getOrCreate()
 
     System.clearProperty("spark.driver.port")
     System.clearProperty("spark.hostPort")
@@ -93,6 +97,9 @@ trait TestEnvironment extends BeforeAndAfterAll
     sparkContext
   }
 
+  lazy val _sc: SparkContext = _ssc.sparkContext
+
+  implicit def ssc: SparkSession = _ssc
   implicit def sc: SparkContext = _sc
 
   // get the name of the class which mixes in this trait

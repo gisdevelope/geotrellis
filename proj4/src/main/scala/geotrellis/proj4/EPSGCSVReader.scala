@@ -18,7 +18,6 @@ package geotrellis.proj4
 
 import com.opencsv.CSVReader
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
 import java.io.InputStreamReader
@@ -84,7 +83,7 @@ class EPSGCSVReader {
     fileName: String,
     code: Int,
     codeFlag: String): Option[Map[String, String]] = {
-    val resourcePath = s"/geotrellis/proj4/$fileName"
+    val resourcePath = s"/proj4/$fileName"
     val stream = getClass.getResourceAsStream(resourcePath)
     if(stream == null) { sys.error(s"Cannot find resource $resourcePath") }
     val reader =

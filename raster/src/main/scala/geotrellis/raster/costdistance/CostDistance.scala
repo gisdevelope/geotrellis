@@ -40,7 +40,7 @@ object CostDistance {
     *
     */
   def apply(cost: Tile, points: Seq[(Int, Int)]): Tile = {
-    val (cols, rows) = cost.dimensions
+    val Dimensions(cols, rows) = cost.dimensions
     val output = DoubleArrayTile.empty(cols, rows)
 
     for((c, r) <- points)
@@ -181,7 +181,7 @@ object CostDistance {
 
   type Cost = (Int, Int, Double)
 
-  private def calcNeighbors(c: Int, r: Int, cost: Tile, d: DoubleArrayTile, p: PriorityQueue[Cost]) {
+  private def calcNeighbors(c: Int, r: Int, cost: Tile, d: DoubleArrayTile, p: PriorityQueue[Cost]): Unit = {
     val l = dirs.length
     var z = 0
 

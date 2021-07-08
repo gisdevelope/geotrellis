@@ -17,49 +17,43 @@
 package geotrellis.geotools
 
 import geotrellis.proj4.{LatLng, WebMercator}
-import geotrellis.raster._
 import geotrellis.vector._
 
-import org.geotools.data.shapefile._
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-import scala.collection.JavaConverters._
-
-
-class GeometryToSimpleFeatureSpec
-    extends FunSpec
-    with Matchers {
+class GeometryToSimpleFeatureSpec extends AnyFunSpec with Matchers {
 
   describe("The Geometry to SimpleFeature Conversion") {
 
     it("should handle Points") {
       val geom = Point(0, 1)
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should handle Lines") {
-      val geom = Line(Point(0, 0), Point(3, 3))
+      val geom = LineString(Point(0, 0), Point(3, 3))
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should handle Polygons") {
       val geom = Polygon(Point(0, 0), Point(4, 0), Point(0, 3), Point(0, 0))
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should handle MultiPoints") {
       val geom = MultiPoint(Point(0, 0), Point(4, 0), Point(0, 3), Point(0, 0))
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should handle MultiLines") {
-      val geom = MultiLine(Line(Point(0, 0), Point(4, 0)), Line(Point(0, 3), Point(0, 0)))
+      val geom = MultiLineString(LineString(Point(0, 0), Point(4, 0)), LineString(Point(0, 3), Point(0, 0)))
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should handle MultiPolygons") {
@@ -68,7 +62,7 @@ class GeometryToSimpleFeatureSpec
         Polygon(Point(0, 0), Point(5, 0), Point(0, 12), Point(0, 0))
       )
       val simpleFeature = GeometryToSimpleFeature(geom, None, List(("count", 42)))
-      simpleFeature.getDefaultGeometryProperty.getValue should be (geom.jtsGeom)
+      simpleFeature.getDefaultGeometryProperty.getValue should be (geom)
     }
 
     it("should properly encode the CRS") {

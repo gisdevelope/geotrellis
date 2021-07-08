@@ -16,18 +16,14 @@
 
 package geotrellis.spark.mapalgebra.focal.hillshade
 
+import geotrellis.layer._
 import geotrellis.raster._
-import geotrellis.raster.mapalgebra.focal.hillshade._
-
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 
-import geotrellis.vector.Extent
+import org.scalatest.funspec.AnyFunSpec
 
-import org.scalatest._
-import spire.syntax.cfor._
-
-class HillshadeSpec extends FunSpec with TestEnvironment {
+class HillshadeSpec extends AnyFunSpec with TestEnvironment {
 
   describe("Hillshade Elevation Spec") {
 

@@ -17,20 +17,20 @@
 package geotrellis.spark.ingest
 
 import geotrellis.vector._
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.spark.io.hadoop._
+import geotrellis.spark.store.hadoop._
 import geotrellis.proj4._
 import geotrellis.spark.testkit._
 
 import org.apache.hadoop.fs.Path
-import org.scalatest._
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 import scala.collection.mutable
 
-class IngestSpec extends FunSpec
-  with Matchers
-  with TestEnvironment {
+class IngestSpec extends AnyFunSpec with Matchers with TestEnvironment {
   describe("Ingest") {
     it("should read GeoTiff with overrided input CRS") {
       val source = HadoopGeoTiffRDD.spatial(new Path(inputHome, "all-ones.tif"), HadoopGeoTiffRDD.Options(crs = Some(CRS.fromEpsgCode(3857))))
@@ -42,7 +42,7 @@ class IngestSpec extends FunSpec
       val source = sc.hadoopGeoTiffRDD(new Path(inputHome, "all-ones.tif"))
       Ingest[ProjectedExtent, SpatialKey](source, LatLng, ZoomedLayoutScheme(LatLng, 512)) { (rdd, zoom) =>
         zoom should be (10)
-        rdd.filter(!_._2.isNoDataTile).count should be (8)
+        rdd.filter(!_._2.isNoDataTile).count() should be (8)
       }
     }
 
@@ -52,11 +52,11 @@ class IngestSpec extends FunSpec
 
       // force to use zoomed layout scheme
       Ingest[ProjectedExtent, SpatialKey](source, LatLng, ZoomedLayoutScheme(LatLng, 512), pyramid = true, maxZoom = Some(10)) { (rdd, zoom) =>
-        zlist += (zoom -> rdd.filter(!_._2.isNoDataTile).count)
+        zlist += (zoom -> rdd.filter(!_._2.isNoDataTile).count())
       }
 
       Ingest[ProjectedExtent, SpatialKey](source, LatLng, ZoomedLayoutScheme(LatLng, 512), pyramid = true) { (rdd, zoom) =>
-        flist += (zoom -> rdd.filter(!_._2.isNoDataTile).count)
+        flist += (zoom -> rdd.filter(!_._2.isNoDataTile).count())
       }
 
       zlist should contain theSameElementsAs flist
@@ -66,7 +66,7 @@ class IngestSpec extends FunSpec
       val source = sc.hadoopGeoTiffRDD(new Path(inputHome, "all-ones.tif"))
       Ingest[ProjectedExtent, SpatialKey](source, LatLng, ZoomedLayoutScheme(LatLng, 512), maxZoom = Some(11)) { (rdd, zoom) =>
         zoom should be (11)
-        rdd.filter(!_._2.isNoDataTile).count should be (18)
+        rdd.filter(!_._2.isNoDataTile).count() should be (18)
       }
     }
   }

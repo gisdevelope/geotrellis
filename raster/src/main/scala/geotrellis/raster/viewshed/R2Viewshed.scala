@@ -90,8 +90,12 @@ object R2Viewshed extends Serializable {
     * @param  cols  The number of columns
     * @param  rows  The number of rows
     */
-  def generateEmptyViewshedTile(cols: Int, rows: Int) =
-    ArrayTile.empty(IntConstantNoDataCellType, cols, rows)
+  def generateEmptyViewshedTile(cols: Int, rows: Int, debug: Int = 0) = {
+    if (debug == 0)
+      ArrayTile.empty(IntConstantNoDataCellType, cols, rows)
+    else
+      IntArrayTile.fill(debug, cols, rows)
+  }
 
   /**
     * Given a direction of propagation, a packet of rays, and an angle
@@ -144,11 +148,12 @@ object R2Viewshed extends Serializable {
     * @param  startCol       The x position of the vantage point
     * @param  startRow       The y position of the vantage point
     * @param  op             The aggregation operator to use (e.g. Or)
+    * @param  scatter        Whether to allow light to move (one pixel) normal to the ray
     */
   def apply(
     elevationTile: Tile,
     startCol: Int, startRow: Int,
-    op: AggregationOperator = Or): Tile = {
+    op: AggregationOperator = Or, scatter: Boolean = false): Tile = {
     val cols = elevationTile.cols
     val rows = elevationTile.rows
     val viewHeight = elevationTile.getDouble(startCol, startRow)
@@ -170,7 +175,8 @@ object R2Viewshed extends Serializable {
       operator = op,
       altitude = Double.NegativeInfinity,
       cameraDirection = 0,
-      cameraFOV = -1.0
+      cameraFOV = -1.0,
+      scatter = scatter
     )
     viewshedTile
   }
@@ -203,6 +209,7 @@ object R2Viewshed extends Serializable {
     * @param  cameraDirection  The direction (in radians) of the camera
     * @param  cameraFOV        The camera field of view, rays whose dot product with the camera direction are less than this are filtered out
     * @param  epsilon          Any ray within this many radians of vertical (horizontal) will be considered vertical (horizontal)
+    * @param  scatter          Whether to allow light to move (one pixel) normal to the ray
     */
   def compute(
     elevationTile: Tile, viewshedTile: MutableArrayTile,
@@ -217,7 +224,8 @@ object R2Viewshed extends Serializable {
     altitude: Double = Double.NegativeInfinity,
     cameraDirection: Double = 0,
     cameraFOV: Double = -1.0,
-    epsilon: Double = (1/math.Pi)
+    epsilon: Double = (1/math.Pi),
+    scatter: Boolean = true
   ): Tile = {
     val cols = elevationTile.cols
     val rows = elevationTile.rows
@@ -276,11 +284,12 @@ object R2Viewshed extends Serializable {
     }
 
     var alpha: Double = Double.NaN
+    var direction: From = FromInside
     var terminated: Boolean = false
 
     /**
       * This call back is called by the line rasterizer.  A ray
-      * emanating from the source is transformed into a
+      * emanating from the source is transformed into
       * DirectedSegments above, then each point on the ray is queried
       * by this function via the line rasterizer.
       *
@@ -314,6 +323,49 @@ object R2Viewshed extends Serializable {
           operator match {
             case Or if visible =>
               viewshedTile.set(col, row, 1)
+              if (scatter) {
+                direction match {
+                  case FromNorth | FromSouth =>
+                    if (col-1 >= 0) {
+                      val elevation = elevationTile.getDouble(col-1, row) - drop - viewHeight
+                      val groundAngle = math.atan(elevation / distance)
+                      val angle =
+                        if (altitude == Double.NegativeInfinity) groundAngle
+                        else  math.atan((altitude - drop - viewHeight) / distance)
+                      if (alpha <= angle)
+                        viewshedTile.set(col-1, row, 1)
+                    }
+                    if ((col+1 < viewshedTile.cols) && (col+1 < elevationTile.cols)) {
+                      val elevation = elevationTile.getDouble(col+1, row) - drop - viewHeight
+                      val groundAngle = math.atan(elevation / distance)
+                      val angle =
+                        if (altitude == Double.NegativeInfinity) groundAngle
+                        else  math.atan((altitude - drop - viewHeight) / distance)
+                      if (alpha <= angle)
+                        viewshedTile.set(col+1, row, 1)
+                    }
+                  case FromEast | FromWest =>
+                    if (row-1 >= 0) {
+                      val elevation = elevationTile.getDouble(col, row-1) - drop - viewHeight
+                      val groundAngle = math.atan(elevation / distance)
+                      val angle =
+                        if (altitude == Double.NegativeInfinity) groundAngle
+                        else  math.atan((altitude - drop - viewHeight) / distance)
+                      if (alpha <= angle)
+                        viewshedTile.set(col, row-1, 1)
+                    }
+                    if ((row+1 < viewshedTile.rows) && (row+1 < elevationTile.cols)) {
+                      val elevation = elevationTile.getDouble(col, row+1) - drop - viewHeight
+                      val groundAngle = math.atan(elevation / distance)
+                      val angle =
+                        if (altitude == Double.NegativeInfinity) groundAngle
+                        else  math.atan((altitude - drop - viewHeight) / distance)
+                      if (alpha <= angle)
+                        viewshedTile.set(col, row+1, 1)
+                    }
+                  case _ =>
+                }
+              }
             case And if !visible =>
               viewshedTile.set(col, row, 0)
             case And if (visible && isNoData(current)) =>
@@ -343,31 +395,34 @@ object R2Viewshed extends Serializable {
     /***************
      * GOING NORTH *
      ***************/
+    direction = FromSouth
     i = 0; while (i < northSegs.length) {
       val seg = northSegs(i)
       alpha = thetaToAlpha(from, rays, seg.theta); terminated = false
       Rasterizer.foreachCellInGridLine(seg.x0, seg.y0, seg.x1, seg.y1, null, re, false)(callback)
-      if (!terminated && !seg.isRumpSegment) (southRays += Ray(seg.theta, alpha))
+      if (!terminated && !seg.isRumpSegment()) (southRays += Ray(seg.theta, alpha))
       i += 1
     }
 
     /***************
      * GOING SOUTH *
      ***************/
+    direction = FromNorth
     i = 0; while (i < southSegs.length) {
       val seg = southSegs(i)
       alpha = thetaToAlpha(from, rays, seg.theta); terminated = false
       Rasterizer.foreachCellInGridLine(seg.x0, seg.y0, seg.x1, seg.y1, null, re, false)(callback)
-      if (!terminated && !seg.isRumpSegment) (northRays += Ray(seg.theta, alpha))
+      if (!terminated && !seg.isRumpSegment()) (northRays += Ray(seg.theta, alpha))
       i += 1
     }
 
     /**************
      * GOING EAST *
      **************/
+    direction = FromWest
     if ((cols <= startCol) && (startCol <= 2*cols) &&
         (eastSegs.forall(_.isNearVertical(epsilon))) &&
-        (eastSegs.forall(_.isRumpSegment))) { // Sharp angle case
+        (eastSegs.forall(_.isRumpSegment()))) { // Sharp angle case
       i = 0; while (i < rows) {
         viewshedTile.set(cols-1, i, viewshedTile.get(cols-2, i))
         i += 1
@@ -377,7 +432,7 @@ object R2Viewshed extends Serializable {
         val seg = eastSegs(i)
         alpha = thetaToAlpha(from, rays, seg.theta); terminated = false
         Rasterizer.foreachCellInGridLine(seg.x0, seg.y0, seg.x1, seg.y1, null, re, false)(callback)
-        if (!terminated && !seg.isRumpSegment) (westRays += Ray(seg.theta, alpha))
+        if (!terminated && !seg.isRumpSegment()) (westRays += Ray(seg.theta, alpha))
         i += 1
       }
     }
@@ -385,9 +440,10 @@ object R2Viewshed extends Serializable {
     /**************
      * GOING WEST *
      **************/
+    direction = FromEast
     if ((-1*cols < startCol) && (startCol < 0) &&
         (westSegs.forall(_.isNearVertical(epsilon))) &&
-        (westSegs.forall(_.isRumpSegment))) {
+        (westSegs.forall(_.isRumpSegment()))) {
       i = 0; while (i < rows) {
         viewshedTile.set(0, i, viewshedTile.get(1, i))
         i += 1
@@ -397,7 +453,7 @@ object R2Viewshed extends Serializable {
         val seg = westSegs(i)
         alpha = thetaToAlpha(from, rays, seg.theta); terminated = false
         Rasterizer.foreachCellInGridLine(seg.x0, seg.y0, seg.x1, seg.y1, null, re, false)(callback)
-        if (!terminated && !seg.isRumpSegment) (eastRays += Ray(seg.theta, alpha))
+        if (!terminated && !seg.isRumpSegment()) (eastRays += Ray(seg.theta, alpha))
         i += 1
       }
     }
@@ -407,7 +463,7 @@ object R2Viewshed extends Serializable {
      ***************/
     if ((rows <= startRow) && (startRow <= 2*rows) &&
         (northSegs.forall(_.isNearHorizontal(epsilon))) &&
-        (northSegs.forall(_.isRumpSegment))) {
+        (northSegs.forall(_.isRumpSegment()))) {
       i = 0; while (i < cols) {
         viewshedTile.set(i, rows-1, viewshedTile.get(i, rows-2))
         i += 1
@@ -419,7 +475,7 @@ object R2Viewshed extends Serializable {
      ***************/
     if ((-1*rows < startRow) && (startRow < 0) &&
         (southSegs.forall(_.isNearHorizontal(epsilon))) &&
-        (southSegs.forall(_.isRumpSegment))) {
+        (southSegs.forall(_.isRumpSegment()))) {
       i = 0; while (i < cols) {
         viewshedTile.set(i, 0, viewshedTile.get(i, 1))
         i += 1

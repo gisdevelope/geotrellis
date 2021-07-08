@@ -19,20 +19,18 @@ package geotrellis.geotools
 import geotrellis.proj4.LatLng
 import geotrellis.vector._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-
-class GeometryToSimpleFeatureMethodsSpec
-    extends FunSpec
-    with Matchers {
+class GeometryToSimpleFeatureMethodsSpec extends AnyFunSpec with Matchers {
 
   describe("The .toSimpleFeature Extension Methods") {
 
     val point = Point(0, 1)
-    val line = Line(Point(0, 0), Point(3, 3))
+    val line = LineString(Point(0, 0), Point(3, 3))
     val polygon = Polygon(Point(0, 0), Point(4, 0), Point(0, 3), Point(0, 0))
     val multiPoint = MultiPoint(Point(0, 0), Point(4, 0), Point(0, 3), Point(0, 0))
-    val multiLine = MultiLine(Line(Point(0, 0), Point(4, 0)), Line(Point(0, 3), Point(0, 0)))
+    val multiLine = MultiLineString(LineString(Point(0, 0), Point(4, 0)), LineString(Point(0, 3), Point(0, 0)))
     val multiPolygon = MultiPolygon(
       Polygon(Point(0, 0), Point(-4, 0), Point(0, -3), Point(0, 0)),
       Polygon(Point(0, 0), Point(5, 0), Point(0, 12), Point(0, 0))

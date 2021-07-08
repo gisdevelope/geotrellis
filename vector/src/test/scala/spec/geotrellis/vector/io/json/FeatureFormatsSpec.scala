@@ -16,22 +16,24 @@
 
 package geotrellis.vector.io.json
 
-import org.scalatest._
+import io.circe.generic._
+import io.circe.syntax._
+import cats.syntax.either._
 import geotrellis.vector._
-import geotrellis.vector.io._
 
-import spray.json._
-import spray.json.DefaultJsonProtocol._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.flatspec.AnyFlatSpec
 
-class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
+class FeatureFormatsSpec extends AnyFlatSpec with Matchers with GeoJsonSupport {
 
   val pointFeature = PointFeature(Point(6.0,1.2), 123)
-  val lineFeature = LineFeature(Line(Point(1,2) :: Point(1,3) :: Nil), 321)
+  val lineFeature = LineStringFeature(LineString(Point(1,2) :: Point(1,3) :: Nil), 321)
 
   "Feature" should "work single point feature" in {
     val body =
       """{
         |  "type": "Feature",
+        |  "bbox":[6.0,1.2,6.0,1.2],
         |  "geometry": {
         |    "type": "Point",
         |    "coordinates": [6.0, 1.2]
@@ -39,14 +41,15 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
         |  "properties": 123
         |}""".stripMargin.parseJson
 
-    pointFeature.toJson should equal (body)
-    body.convertTo[PointFeature[Int]] should equal(pointFeature)
+    pointFeature.asJson should equal (body)
+    body.as[PointFeature[Int]].valueOr(throw _) should equal(pointFeature)
   }
 
   it should "work single line feature" in {
     val body =
       """{
         |  "type": "Feature",
+        |  "bbox":[1.0,2.0,1.0,3.0],
         |  "geometry": {
         |    "type": "LineString",
         |    "coordinates": [[1.0, 2.0], [1.0, 3.0]]
@@ -54,8 +57,8 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
         |  "properties": 321
         |}""".stripMargin.parseJson
 
-    lineFeature.toJson should equal (body)
-    body.convertTo[LineFeature[Int]] should equal(lineFeature)
+    lineFeature.asJson should equal (body)
+    body.as[LineStringFeature[Int]].valueOr(throw _) should equal(lineFeature)
   }
 
   it should "knows how to heterogeneous collection" in {
@@ -64,6 +67,7 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
        |  "type": "FeatureCollection",
        |  "features": [{
        |    "type": "Feature",
+       |    "bbox":[1.0,2.0,1.0,3.0],
        |    "geometry": {
        |      "type": "LineString",
        |      "coordinates": [[1.0, 2.0], [1.0, 3.0]]
@@ -71,6 +75,7 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
        |    "properties": 321
        |  }, {
        |    "type": "Feature",
+       |    "bbox":[6.0,1.2,6.0,1.2],
        |    "geometry": {
        |      "type": "Point",
        |      "coordinates": [6.0, 1.2]
@@ -83,11 +88,11 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
     jsonFeatures += lineFeature
     jsonFeatures += pointFeature
 
-    jsonFeatures.toJson should equal (body)
+    jsonFeatures.asJson should equal (body)
 
-    val fc = body.convertTo[JsonFeatureCollection]
+    val fc = body.as[JsonFeatureCollection].valueOr(throw _)
     fc.getAllFeatures[PointFeature[Int]] should contain (pointFeature)
-    fc.getAllFeatures[LineFeature[Int]] should contain (lineFeature)
+    fc.getAllFeatures[LineStringFeature[Int]] should contain (lineFeature)
   }
 
   it should "parse polygons out of a feature collection" in {
@@ -161,20 +166,20 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
     ]
 }"""
 
-    val features = geojson.parseGeoJson[JsonFeatureCollection].getAllPolygons()
+    val features = geojson.parseGeoJson[JsonFeatureCollection]().getAllPolygons()
     features.length should be (2)
   }
 
   it should "be able to handle Feature with custom data" in {
+    @JsonCodec
     case class SomeData(name: String, value: Double)
-    val format = jsonFormat2(SomeData)
-    implicit val someDataFormat: JsonReader[SomeData] = format
 
     val f = PointFeature(Point(1,44), SomeData("Bob", 32.2))
 
     val body =
       """{
         |  "type": "Feature",
+        |  "bbox":[1.0,44.0,1.0,44.0],
         |  "geometry": {
         |    "type": "Point",
         |    "coordinates": [1.0, 44.0]
@@ -185,8 +190,7 @@ class FeatureFormatsSpec extends FlatSpec with Matchers with GeoJsonSupport {
         |  }
         |}""".stripMargin.parseJson
 
-    implicit val _format: JsonFormat[SomeData] = format
-    f.toJson should equal (body)
-    body.convertTo[PointFeature[SomeData]] should equal (f)
+    f.asJson should equal (body)
+    body.as[PointFeature[SomeData]].valueOr(throw _) should equal (f)
   }
 }

@@ -17,27 +17,22 @@
 package geotrellis.raster
 
 import java.nio.file.Files
-import java.nio.file.attribute.FileAttribute
 
 import geotrellis.proj4.LatLng
 import geotrellis.raster.io.geotiff.GeoTiff
 import geotrellis.raster.io.geotiff.writer.TiffTagFieldValue
 import geotrellis.vector.Extent
-import org.scalatest._
 
-class CellTypeSpec extends FunSpec with Matchers with Inspectors {
-  def roundTrip(ct: CellType) {
+import org.scalatest.Inspectors
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class CellTypeSpec extends AnyFunSpec with Matchers with Inspectors {
+  def roundTrip(ct: CellType) = {
     withClue("fromName"){
       // Updated behavior.
       val str = ct.name
       val ctp = CellType.fromName(str)
-      ctp should be (ct)
-    }
-    withClue("fromString"){
-      // Tests backward compatibility.
-      val str = ct.toString
-      //noinspection ScalaDeprecation
-      val ctp = CellType.fromString(str)
       ctp should be (ct)
     }
   }
@@ -152,25 +147,22 @@ class CellTypeSpec extends FunSpec with Matchers with Inspectors {
 
   describe("CellType Bounds checking") {
 
-    implicit val doubleAsIntegral = scala.math.Numeric.DoubleAsIfIntegral
-    implicit val floatAsIntegral = scala.math.Numeric.FloatAsIfIntegral
-
     it("should handle encoding no data types across valid bounds") {
       type PhantomCell = AnyVal
       type PhantomNoData = AnyVal
 
-      forEvery(CellDef.all) { cd ⇒
+      forEvery(CellDef.all) { cd =>
         val cellDef = cd.asInstanceOf[CellDef[PhantomCell, PhantomNoData]]
         withClue(s"for cell type '$cellDef'") {
-          forEvery(cellDef.range.testPoints) { nd ⇒
+          forEvery(cellDef.range.testPoints) { nd =>
             withClue(s"for no data '$nd'") {
               val ct = cellDef(nd)
               roundTrip(ct)
               roundTripTiff(ct)
               assert(cellDef.toCode(nd) === ct.name)
               ct.widenedNoData(cellDef.alg) match {
-                case WideIntNoData(wnd) ⇒ assert(wnd === nd)
-                case WideDoubleNoData(wnd) ⇒ assert(wnd === nd)
+                case WideIntNoData(wnd) => assert(wnd === nd)
+                case WideDoubleNoData(wnd) => assert(wnd === nd)
               }
               assert(TiffTagFieldValue.createNoDataString(ct) === Some(nd.toString))
             }
@@ -178,23 +170,21 @@ class CellTypeSpec extends FunSpec with Matchers with Inspectors {
         }
       }
     }
-    abstract class RangeAlgebra[T: Integral] {
-      val alg = implicitly[Integral[T]]
+    abstract class RangeAlgebra[T: Numeric] {
+      val alg = implicitly[Numeric[T]]
       import alg._
       val one = alg.one
       val twice =  one + one
     }
 
-    case class TestRange[Encoding: Integral](min: Encoding, max: Encoding) extends RangeAlgebra[Encoding]{
+    case class TestRange[Encoding: Numeric](min: Encoding, middle: Encoding, max: Encoding) extends RangeAlgebra[Encoding]{
       import alg._
-      def width = max - min
-      def middle = width / twice
       def testPoints = Seq(
         min, min + one, middle - one, middle, middle + one, max - one, max
       )
     }
 
-    abstract class CellDef[CellEncoding: Integral, NoDataEncoding: Integral] extends RangeAlgebra[CellEncoding] {
+    abstract class CellDef[CellEncoding: Numeric, NoDataEncoding: Numeric] extends RangeAlgebra[CellEncoding] {
       val range: TestRange[NoDataEncoding]
       val baseCode: String
       def apply(noData: NoDataEncoding): CellType with UserDefinedNoData[CellEncoding]
@@ -212,43 +202,42 @@ class CellTypeSpec extends FunSpec with Matchers with Inspectors {
     object UByteDef extends CellDef[Byte, Short] {
       val baseCode = "uint8"
       def apply(noData: Short) = UByteUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = TestRange(0.toShort, (Byte.MaxValue * 2).toShort)
+      val range = TestRange(0.toShort, Byte.MaxValue.toShort, (Byte.MaxValue * 2).toShort)
       def toCellEncoding(noData: Short) = noData.toByte
     }
 
     object ByteDef extends CellDef[Byte, Byte] {
       val baseCode = "int8"
       def apply(noData: Byte) = ByteUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = TestRange(Byte.MinValue, Byte.MaxValue)
+      val range = TestRange(Byte.MinValue, 0, Byte.MaxValue)
       def toCellEncoding(noData: Byte) = noData
     }
 
     object UShortDef extends CellDef[Short, Int] {
       val baseCode = "uint16"
       def apply(noData: Int) = UShortUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = TestRange(0, Short.MaxValue * 2)
+      val range = TestRange(0, Short.MaxValue, Short.MaxValue * 2)
       def toCellEncoding(noData: Int) = noData.toShort
     }
 
     object ShortDef extends CellDef[Short, Short] {
       val baseCode = "int16"
       def apply(noData: Short) = ShortUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = TestRange(Short.MinValue, Short.MaxValue)
+      val range = TestRange(Short.MinValue, 0, Short.MaxValue)
       def toCellEncoding(noData: Short) = noData
     }
 
     object IntDef extends CellDef[Int, Int] {
       val baseCode = "int32"
       def apply(noData: Int) = IntUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = TestRange(Int.MinValue, Int.MaxValue)
+      val range = TestRange(Int.MinValue, 0, Int.MaxValue)
       def toCellEncoding(noData: Int) = noData
     }
 
     object FloatDef extends CellDef[Float, Double] {
       val baseCode = "float32"
       def apply(noData: Double) = FloatUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = new TestRange(Float.MinValue.toDouble, Float.MaxValue.toDouble) {
-        override def middle = 0.0f
+      val range = new TestRange(Float.MinValue.toDouble, 0, Float.MaxValue.toDouble) {
       }
       def toCellEncoding(noData: Double) = noData.toFloat
     }
@@ -256,8 +245,7 @@ class CellTypeSpec extends FunSpec with Matchers with Inspectors {
     object DoubleDef extends CellDef[Double, Double] {
       val baseCode = "float64"
       def apply(noData: Double) = DoubleUserDefinedNoDataCellType(toCellEncoding(noData))
-      val range = new TestRange(Double.MinValue, Double.MaxValue) {
-        override def middle = 0.0
+      val range = new TestRange(Double.MinValue, 0, Double.MaxValue) {
       }
       def toCellEncoding(noData: Double) = noData
     }
@@ -273,22 +261,23 @@ class CellTypeSpec extends FunSpec with Matchers with Inspectors {
         .map(_.withNoData(Some(noData)))
 
       forEvery(userDefinedCelltypes) {
-        case c: UserDefinedNoData[_] ⇒ c.noDataValue match {
-          case n: Byte ⇒ assert(n === noData.toByte)
-          case n: Short ⇒ assert(n === noData.toShort)
-          case n: Int ⇒ assert(n === noData.toInt)
-          case n: Float ⇒ assert(n === noData.toFloat)
-          case n: Double ⇒ assert(n === noData.toDouble)
+        case c: UserDefinedNoData[_] => c.noDataValue match {
+          case n: Byte => assert(n === noData.toByte)
+          case n: Short => assert(n === noData.toShort)
+          case n: Int => assert(n === noData.toInt)
+          case n: Float => assert(n === noData.toFloat)
+          case n: Double => assert(n === noData.toDouble)
         }
+        case _ => ???
       }
     }
     it("should report nodata value for ConstantNoData") {
       forEvery(CellType.constantNoDataCellTypes) { _.noDataValue match {
-        case n: Byte ⇒ assert(n === byteNODATA || n === ubyteNODATA)
-        case n: Short ⇒ assert(n === shortNODATA || n === ushortNODATA)
-        case n: Int ⇒ assert(isNoData(n))
-        case n: Float ⇒ assert(isNoData(n))
-        case n: Double ⇒ assert(isNoData(n))
+        case n: Byte => assert(n === byteNODATA || n === ubyteNODATA)
+        case n: Short => assert(n === shortNODATA || n === ushortNODATA)
+        case n: Int => assert(isNoData(n))
+        case n: Float => assert(isNoData(n))
+        case n: Double => assert(isNoData(n))
       }}
     }
   }

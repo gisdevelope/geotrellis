@@ -18,14 +18,15 @@ package geotrellis.raster.merge
 
 import geotrellis.raster._
 import geotrellis.raster.resample.{NearestNeighbor, ResampleMethod}
-import geotrellis.vector.Extent
 import geotrellis.util.MethodExtensions
 
 
 /**
   * A class providing extension methods for merging rasters.
   */
-class RasterMergeMethods[T <: CellGrid: ? => TileMergeMethods[T]](val self: Raster[T]) extends MethodExtensions[Raster[T]] {
+abstract class RasterMergeMethods[
+  T <: CellGrid[Int]: * => TileMergeMethods[T]
+](val self: Raster[T]) extends MethodExtensions[Raster[T]] {
 
   /**
     * Merge this [[Raster]] with the other one.  All places in the

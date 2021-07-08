@@ -18,18 +18,19 @@ package geotrellis.raster.mapalgebra.local
 
 import geotrellis.raster._
 
-import org.scalatest._
-
 import geotrellis.raster.testkit._
 
-class DefinedSpec extends FunSpec 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class DefinedSpec extends AnyFunSpec
                      with Matchers 
                      with RasterMatchers 
                      with TileBuilders {
   describe("Defined") {
     it("returns correct result for an integer raster") {
       val r = positiveIntegerNoDataRaster
-      val result = r.localDefined
+      val result = r.localDefined()
       for(col <- 0 until r.cols) {
         for(row <- 0 until r.rows) {
           if(isNoData(r.get(col,row))) result.get(col,row) should be (0)
@@ -40,7 +41,7 @@ class DefinedSpec extends FunSpec
 
     it("returns correct result for a double raster") {
       val r = probabilityNoDataRaster
-      val result = r.localDefined
+      val result = r.localDefined()
       for(col <- 0 until r.cols) {
         for(row <- 0 until r.rows) {
           if(isNoData(r.getDouble(col,row))) result.get(col,row) should be (0)

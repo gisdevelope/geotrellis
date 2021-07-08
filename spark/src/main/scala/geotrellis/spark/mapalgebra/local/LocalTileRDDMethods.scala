@@ -17,7 +17,6 @@
 package geotrellis.spark.mapalgebra.local
 
 import geotrellis.raster.mapalgebra.local._
-import geotrellis.spark.mapalgebra._
 import geotrellis.raster._
 import geotrellis.spark._
 import org.apache.spark.Partitioner
@@ -132,7 +131,7 @@ trait LocalTileRDDMethods[K] extends TileRDDMethods[K]
   /**
     * Negate (multiply by -1) each value in a raster.
     */
-  def unary_-() = localNegate()
+  def unary_- = localNegate()
 
   /**
     * Bitwise negation of Tile.

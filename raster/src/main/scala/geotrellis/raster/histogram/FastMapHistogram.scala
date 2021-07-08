@@ -16,11 +16,10 @@
 
 package geotrellis.raster.histogram
 
+import cats.Monoid
 import geotrellis.raster._
 
-import scala.math.{ceil, max, min, abs}
 import scala.util.Sorting
-
 import sys.error
 
 
@@ -28,6 +27,13 @@ import sys.error
   * Companion object for the [[FastMapHistogram]] type.
   */
 object FastMapHistogram {
+
+  implicit val fastMapHistogramMonoid: Monoid[FastMapHistogram] =
+    new Monoid[FastMapHistogram] {
+      def empty: FastMapHistogram = FastMapHistogram()
+      def combine(x: FastMapHistogram, y: FastMapHistogram) = x.merge(y)
+    }
+
   private final val UNSET: Int = NODATA + 1
   private final val SIZE = 16
 
@@ -129,7 +135,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     * Adjust the histogram so that that it is as if the given value
     * 'item' has been seen 'count' times.
     */
-  def setItem(item: Int, count: Long) {
+  def setItem(item: Int, count: Long): Unit = {
     // We use our hashing strategy to figure out which bucket this
     // item gets.  if the bucket is empty, we're adding the item,
     // whereas if its not we are just increasing the item's count.
@@ -171,7 +177,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
   /**
     * Forget any encounters with the value 'item'.
     */
-  def uncountItem(item: Int) {
+  def uncountItem(item: Int): Unit = {
     // We use our hashing strategy to figure out which bucket this
     // item gets.  if the bucket is empty, we never counted this
     // item. otherwise, we need to remove this value and its counts.
@@ -183,7 +189,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     counts(i) = 0
   }
 
-  private def resize() {
+  private def resize(): Unit = {
     // It's important that size always be a power of 2. We grow our
     // hash table by x4 until it starts getting big, at which point we
     // only grow by x2.
@@ -219,7 +225,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     limit = (size * FACTOR).toInt
   }
 
-  def totalCount = total
+  def totalCount(): Long = total
 
   /**
     * Return a mutable copy of the present [[FastMapHistogram]].
@@ -230,7 +236,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     * Return an integer array containing the values seen by this
     * histogram.
     */
-  def rawValues() = {
+  def rawValues(): Array[Int] = {
     val keys = Array.ofDim[Int](used)
     var i = 0
     var j = 0
@@ -258,7 +264,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     *
     * @param  f  A unit function of one integer parameter
     */
-  def foreachValue(f: Int => Unit) {
+  def foreachValue(f: Int => Unit): Unit = {
     var i = 0
     while (i < size) {
       if (buckets(i) != UNSET) f(buckets(i))
@@ -269,7 +275,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
   /**
     * The total number of items seen by this histogram.
     */
-  def itemCount(item: Int) = {
+  def itemCount(item: Int): Long = {
     val i = hashItem(item, mask, buckets)
     if (buckets(i) == UNSET) 0 else counts(i)
   }
@@ -278,7 +284,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     * Returns the smallest value seen by the histogram, if it has seen
     * any values.
     */
-  def minValue: Option[Int] = {
+  def minValue(): Option[Int] = {
     var zmin = Int.MaxValue
     var i = 0
     while (i < size) {
@@ -296,7 +302,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     * Returns the largest value seen by the histogram, if it has seen
     * any values.
     */
-  def maxValue: Option[Int] = {
+  def maxValue(): Option[Int] = {
     var zmax = Int.MinValue
     var i = 0
     while (i < size) {
@@ -326,7 +332,7 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
     * Return the smallest and largest values seen by the histogram, if
     * it has seen any values.
     */
-  override def minMaxValues: Option[(Int, Int)] = {
+  override def minMaxValues(): Option[(Int, Int)] = {
     var zmin = Int.MaxValue
     var zmax = Int.MinValue
     var i = 0
@@ -353,19 +359,19 @@ class FastMapHistogram(_size: Int, _buckets: Array[Int], _counts: Array[Long], _
   /**
     * The number of buckets utilized by this [[FastMapHistogram]].
     */
-  def bucketCount() = used
+  def bucketCount(): Int = used
 
   /**
     * The maximum number of buckets this histogram can hold.
     */
-  def maxBucketCount: Int = MAXSIZE
+  def maxBucketCount(): Int = MAXSIZE
 
   /**
     * Return the sum of this histogram and the given one (the sum is
     * the histogram that would result from seeing all of the values
     * seen by the two antecedent histograms).
     */
-  def merge(histogram: Histogram[Int]): Histogram[Int] = {
+  def merge(histogram: Histogram[Int]): FastMapHistogram = {
     val total = FastMapHistogram()
 
     total.update(this); total.update(histogram)

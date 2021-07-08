@@ -18,18 +18,16 @@ package geotrellis.geotools
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
-import geotrellis.vector._
 import geotrellis.vector.testkit._
 
 import javax.media.jai.iterator.RectIterFactory
 import org.geotools.coverage.grid._
-import org.geotools.coverage.grid.io._
 import org.geotools.gce.geotiff._
-import org.opengis.parameter.GeneralParameterValue
-import org.scalatest._
-import spire.syntax.cfor._
 
-class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTestUtils {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class GridCoverage2DConvertersSpec extends AnyFunSpec with Matchers with GeoTiffTestUtils {
 
   case class TestFile(description: String, path: String, isMultiband: Boolean) {
     def gridCoverage2D: GridCoverage2D =
@@ -37,12 +35,12 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
 
     def singlebandRaster: ProjectedRaster[Tile] = {
       val tiff = SinglebandGeoTiff(path)
-      tiff.projectedRaster.copy(raster = Raster(tiff.tile.toArrayTile, tiff.extent))
+      tiff.projectedRaster.copy(raster = Raster(tiff.tile.toArrayTile(), tiff.extent))
     }
 
     def multibandRaster: ProjectedRaster[MultibandTile] = {
       val tiff = MultibandGeoTiff(path)
-      tiff.projectedRaster.copy(raster = Raster(tiff.tile.toArrayTile, tiff.extent))
+      tiff.projectedRaster.copy(raster = Raster(tiff.tile.toArrayTile(), tiff.extent))
     }
   }
 
@@ -219,12 +217,12 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
     describe(s"ProjectedRaster Conversions: $description") {
       it("should convert the GridCoverage2D to a ProjectedRaster[MultibandTile]") {
         val (gridCoverage2D, projectedRaster) = (testFile.gridCoverage2D, testFile.multibandRaster)
-        assertEqual(gridCoverage2D.toProjectedRaster, projectedRaster)
+        assertEqual(gridCoverage2D.toProjectedRaster(), projectedRaster)
       }
 
       it("should convert a ProjectedRaster to a GridCoverage2D") {
         val (gridCoverage2D, projectedRaster) = (testFile.gridCoverage2D, testFile.multibandRaster)
-        assertEqual(projectedRaster.toGridCoverage2D, gridCoverage2D)
+        assertEqual(projectedRaster.toGridCoverage2D(), gridCoverage2D)
       }
     }
   }
@@ -241,7 +239,7 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
 
       it("should convert a ProjectedRaster[Tile] to a GridCoverage2D") {
         val (gridCoverage2D, projectedRaster) = (testFile.gridCoverage2D, testFile.singlebandRaster)
-        assertEqual(projectedRaster.toGridCoverage2D, gridCoverage2D)
+        assertEqual(projectedRaster.toGridCoverage2D(), gridCoverage2D)
       }
     }
   }
@@ -251,12 +249,12 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
     describe(s"Raster Conversions: $description") {
       it("should convert the GridCoverage2D to a Raster[MultibandTile]") {
         val (gridCoverage2D, raster) = (testFile.gridCoverage2D, testFile.multibandRaster.raster)
-        assertEqual(gridCoverage2D.toRaster, raster)
+        assertEqual(gridCoverage2D.toRaster(), raster)
       }
 
       it("should convert a Raster to a GridCoverage2D") {
         val (gridCoverage2D, raster) = (testFile.gridCoverage2D, testFile.multibandRaster.raster)
-        assertEqual(raster.toGridCoverage2D, gridCoverage2D)
+        assertEqual(raster.toGridCoverage2D(), gridCoverage2D)
       }
     }
   }
@@ -273,7 +271,7 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
 
       it("should convert a ProjectedRaster[Tile] to a GridCoverage2D") {
         val (gridCoverage2D, raster) = (testFile.gridCoverage2D, testFile.singlebandRaster.raster)
-        assertEqual(raster.toGridCoverage2D, gridCoverage2D)
+        assertEqual(raster.toGridCoverage2D(), gridCoverage2D)
       }
     }
   }
@@ -282,12 +280,12 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
     describe(s"Conversions to and from ProjectedRaster (singleband): $description") {
       it("should convert a ProjectedRaster[Tile] to a GridCoverage2D to a ProjectedRaster[Tile]") {
         val projectedRaster = testFile.singlebandRaster
-        assertEqual(projectedRaster.toGridCoverage2D.toProjectedRaster(0), projectedRaster)
+        assertEqual(projectedRaster.toGridCoverage2D().toProjectedRaster(0), projectedRaster)
       }
 
       it("should convert a ProjectedRaster[MultibandTile] to a GridCoverage2D to a ProjectedRaster[MultibandTile]") {
         val projectedRaster = testFile.multibandRaster
-        assertEqual(projectedRaster.toGridCoverage2D.toProjectedRaster, projectedRaster)
+        assertEqual(projectedRaster.toGridCoverage2D().toProjectedRaster(), projectedRaster)
       }
     }
   }
@@ -296,12 +294,12 @@ class GridCoverage2DConvertersSpec extends FunSpec with Matchers with GeoTiffTes
     describe(s"Conversions to and from Raster (singleband): $description") {
       it("should convert a Raster[Tile] to a GridCoverage2D to a ProjectedRaster[Tile]") {
         val raster = testFile.singlebandRaster.raster
-        assertEqual(raster.toGridCoverage2D.toRaster(0), raster)
+        assertEqual(raster.toGridCoverage2D().toRaster(0), raster)
       }
 
       it("should convert a Raster[MultibandTile] to a GridCoverage2D to a ProjectedRaster[MultibandTile]") {
         val raster = testFile.multibandRaster.raster
-        assertEqual(raster.toGridCoverage2D.toRaster, raster)
+        assertEqual(raster.toGridCoverage2D().toRaster(), raster)
       }
     }
   }

@@ -20,92 +20,14 @@ import geotrellis.raster._
 import geotrellis.vector._
 import geotrellis.proj4._
 
-import com.vividsolutions.jts.densify.Densifier
 
-import spire.syntax.cfor._
+import spire.math.Integral
 
-/**
-  * This is a conceptual port of GDALSuggestedWarpOutput2, part of GDAL. Docstring paraphrased
-  * from that code.
-  */
+
 object ReprojectRasterExtent {
   import Reproject.Options
 
-  /*
-   * This function is used to suggest the extent and resolution
-   * appropriate given the indicated reprojection CRSs.  It walks
-   * the edges of the input file (approximately 20 sample points along each
-   * edge) transforming into output coordinates in order to get an extents box.
-   */
-  def reprojectExtent(ge: GridExtent, transform: Transform): Extent = {
-    val extent = ge.extent
-    val (cols, rows) = (extent.width / ge.cellwidth, extent.height / ge.cellheight)
-    val PIXEL_STEP = math.min(50.0, math.min(cols, rows)).toInt
-
-    // Find the threshold to densify the extent at.
-    val xThreshold = (cols / PIXEL_STEP) * ge.cellwidth
-    val yThreshold = (rows / PIXEL_STEP) * ge.cellheight
-    val threshold = math.min(xThreshold, yThreshold)
-
-    // Densify the extent to get a more accurate reprojection
-    val denseGeom = Polygon(Densifier.densify(extent.toPolygon.jtsGeom, threshold).asInstanceOf[com.vividsolutions.jts.geom.Polygon])
-    denseGeom.reproject(transform).envelope
-  }
-
-  def apply(ge: GridExtent, transform: Transform, options: Options): GridExtent = {
-    val extent = ge.extent
-    val newExtent = reprojectExtent(ge, transform)
-
-    val (transformedXmin, transformedYmax) = {
-      transform(extent.xmin, extent.ymax)
-    }
-
-    val (transformedXmax, transformedYmin) = {
-      transform(extent.xmax, extent.ymin)
-    }
-
-    options.parentGridExtent match {
-      case Some(parentGridExtent) =>
-        parentGridExtent.createAlignedGridExtent(Extent(transformedXmin, transformedYmin, transformedXmax, transformedYmax))
-      case None =>
-        val (pixelSizeX, pixelSizeY) =
-          options.targetCellSize match {
-            case Some(cellSize) =>
-              (cellSize.width, cellSize.height)
-            case None =>
-              val distance = (transformedXmin, transformedYmax).distance((transformedXmax, transformedYmin))
-              val cols = ge.extent.width / ge.cellwidth
-              val rows = ge.extent.height / ge.cellheight
-              val pixelSize = distance / math.sqrt(cols * cols + rows * rows)
-              (pixelSize, pixelSize)
-          }
-
-        val newColsDouble = newExtent.width / pixelSizeX
-        val newRowsDouble = newExtent.height / pixelSizeY
-
-        val newCols = (newColsDouble + 0.5).toInt//.toLong
-        val newRows = (newRowsDouble + 0.5).toInt//.toLong
-
-        //Adjust the extent to match the pixel size.
-        val adjustedExtent = Extent(newExtent.xmin, newExtent.ymax - (pixelSizeY*newRows), newExtent.xmin + (pixelSizeX*newCols), newExtent.ymax)
-        GridExtent(adjustedExtent, pixelSizeX, pixelSizeY)
-    }
-  }
-
-  def apply(ge: GridExtent, transform: Transform): GridExtent =
-    apply(ge, transform, Options.DEFAULT)
-
-  def apply(ge: GridExtent, src: CRS, dest: CRS, options: Options): GridExtent =
-    if(src == dest) {
-      ge
-    } else {
-      apply(ge, Transform(src, dest), options)
-    }
-
-  def apply(ge: GridExtent, src: CRS, dest: CRS): GridExtent =
-    apply(ge, src, dest, Options.DEFAULT)
-
-  /* A resolution is computed with the intent that the length of the
+  /** A resolution is computed with the intent that the length of the
    * distance from the top left corner of the output imagery to the bottom right
    * corner would represent the same number of pixels as in the source image.
    * Note that if the image is somewhat rotated the diagonal taken isnt of the
@@ -113,9 +35,58 @@ object ReprojectRasterExtent {
    * top/left and bottom/right corners transform.  The output pixel size is
    * always square.  This is intended to approximately preserve the resolution
    * of the input data in the output file.
+   *
+   * This is a conceptual port of GDALSuggestedWarpOutput2, part of GDAL.
+   * Docstring paraphrased from that code.
    */
+  def apply[N: Integral](ge: GridExtent[N], transform: Transform, options: Options): GridExtent[N] = {
+    val extent = ge.extent
+    val newExtent = extent.reprojectAsPolygon(transform, 0.001).extent
+
+    options.parentGridExtent match {
+      case Some(parentGridExtent) =>
+        parentGridExtent.createAlignedGridExtent(newExtent).toGridType[N]
+
+      case None =>
+        val (pixelSizeX, pixelSizeY) =
+          options.targetCellSize match {
+            case Some(cellSize) =>
+              (cellSize.width, cellSize.height)
+            case None =>
+              val distance = newExtent.northWest.distance(newExtent.southEast)
+              val cols = ge.extent.width / ge.cellwidth
+              val rows = ge.extent.height / ge.cellheight
+              val pixelSize = distance / math.sqrt(cols * cols + rows * rows)
+              (pixelSize, pixelSize)
+          }
+
+        val newCols = (newExtent.width / pixelSizeX + 0.5).toLong
+        val newRows = (newExtent.height / pixelSizeY + 0.5).toLong
+
+        //Adjust the extent to match the pixel size.
+        val adjustedExtent = Extent(newExtent.xmin, newExtent.ymax - (pixelSizeY*newRows), newExtent.xmin + (pixelSizeX*newCols), newExtent.ymax)
+
+        // TODO: consider adding .withExtent and .withCellSize to GridExtent so we can parametrize this function on N, T <: GridExtent[N] and keep the type T
+        // ^ this would also remove the requirement of : Integral on N
+        new GridExtent[N](adjustedExtent, CellSize(pixelSizeX, pixelSizeY))
+    }
+  }
+
+  def apply[N: Integral](ge: GridExtent[N], transform: Transform): GridExtent[N] =
+    apply(ge, transform, Options.DEFAULT)
+
+  def apply[N: Integral](ge: GridExtent[N], src: CRS, dest: CRS, options: Options): GridExtent[N] =
+    if(src == dest) {
+      ge
+    } else {
+      apply(ge, Transform(src, dest), options)
+    }
+
+  def apply[N: Integral](ge: GridExtent[N], src: CRS, dest: CRS): GridExtent[N] =
+    apply(ge, src, dest, Options.DEFAULT)
+
   def apply(re: RasterExtent, transform: Transform, options: Reproject.Options): RasterExtent =
-    apply(re: GridExtent, transform, options).toRasterExtent
+    apply(re: GridExtent[Int], transform, options).toRasterExtent()
 
   def apply(re: RasterExtent, transform: Transform): RasterExtent =
     apply(re, transform, Options.DEFAULT)

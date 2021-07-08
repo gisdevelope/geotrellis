@@ -20,15 +20,12 @@ import geotrellis.spark._
 import geotrellis.vector._
 import geotrellis.spark.testkit._
 
-import org.apache.spark.rdd.RDD._
-import org.apache.spark._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class KNearestRDDSpec extends FunSpec
-    with TestEnvironment
-    with Matchers
-{
+class KNearestRDDSpec extends AnyFunSpec with TestEnvironment with Matchers {
+
   describe("K-nearest neighbors") {
     val pts = for (i <- -10 to 10;
                    j <- -10 to 10;
@@ -42,7 +39,7 @@ class KNearestRDDSpec extends FunSpec
                           (-2, 1), (-1, 1), (0, 1),         (2, 1),
                           (-2, 0), (-1, 0),         (1, 0), (2, 0),
                           (-2,-1),          (0,-1), (1,-1), (2,-1),
-                                   (-1,-2), (0,-2), (1,-2)).map { p => PointFeature(Point(p.x, p.y), 0) }
+                                   (-1,-2), (0,-2), (1,-2)).map { p => PointFeature(Point(p._1, p._2), 0) }
 
       val resinex = res.forall { x => expected contains x }
       val exinres = expected.forall { x => res contains x }

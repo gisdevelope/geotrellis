@@ -16,19 +16,15 @@
 
 package geotrellis.raster
 
-import geotrellis.raster.resample._
 import geotrellis.vector.Extent
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
 
 import spire.syntax.cfor._
 
-class CompositeTileSpec extends FunSpec
-                                with TileBuilders
-                                with RasterMatchers
-                                with TestFiles {
-  describe("wrap") {
+class CompositeTileSpec extends AnyFunSpec with TileBuilders with RasterMatchers with TestFiles {
+  describe("CompositeTileSpec wrap") {
     it("wraps a literal raster") {
       val r =
         createTile(
@@ -49,11 +45,11 @@ class CompositeTileSpec extends FunSpec
       for(tile <- tiles) {
         tile.cols should be (3)
         tile.rows should be (2)
-        val arr = tile.toArray
+        val arr = tile.toArray()
         arr.toSet.size should be (1)
         values += arr(0)
       }
-      values.toSeq.sorted.toSeq should be (Seq(1, 2, 3, 4, 5, 6))
+      values.toSeq.sorted should be (Seq(1, 2, 3, 4, 5, 6))
 
       assertEqual(r, tiled)
     }
@@ -79,7 +75,7 @@ class CompositeTileSpec extends FunSpec
           256,
           256
         )
-      val tiled = CompositeTile.wrap(r, tileLayout, cropped = true)
+      val tiled = CompositeTile.wrap(r.tile, tileLayout, cropped = true)
       tiled.tiles.map( t => t.asInstanceOf[CroppedTile])
     }
 
@@ -91,7 +87,7 @@ class CompositeTileSpec extends FunSpec
           256,
           256
         )
-      val tiled = CompositeTile.wrap(r, tileLayout, cropped = false)
+      val tiled = CompositeTile.wrap(r.tile, tileLayout, cropped = false)
       tiled.tiles.map( t => t.asInstanceOf[ArrayTile])
     }
 
@@ -103,8 +99,8 @@ class CompositeTileSpec extends FunSpec
           256,
           256
         )
-      val tiled = CompositeTile.wrap(r, tileLayout, cropped = false)
-      val backToArray = tiled.toArrayTile
+      val tiled = CompositeTile.wrap(r.tile, tileLayout, cropped = false)
+      val backToArray = tiled.toArrayTile()
 
       cfor(0)(_ < backToArray.rows, _ + 1) { row =>
         cfor(0)(_ < backToArray.cols, _ + 1) { col =>
@@ -114,7 +110,7 @@ class CompositeTileSpec extends FunSpec
             }
           } else {
             withClue (s"Value different at $col, $row: ") {
-              backToArray.get(col, row) should be (r.get(col, row))
+              backToArray.get(col, row) should be (r.tile.get(col, row))
             }
           }
         }
@@ -154,6 +150,27 @@ class CompositeTileSpec extends FunSpec
       actualExtent should be (extent)
       assertEqual(actualTile, tile)
 
+    }
+  }
+
+  describe("CompositeTile cellType combine") {
+    it("should union cellTypes") {
+      val int = {
+        val r =
+          createTile(
+            Array(1, 1, 1, 2, 2, 2, 3, 3, 3,
+              1, 1, 1, 2, 2, 2, 3, 3, 3,
+
+              4, 4, 4, 5, 5, 5, 6, 6, 6,
+              4, 4, 4, 5, 5, 5, 6, 6, 6),
+            9, 4)
+
+        val tl = TileLayout(3, 2, 3, 2)
+        CompositeTile.wrap(r, tl)
+      }
+      val dt = int.convert(DoubleCellType)
+
+      int.combine(dt)(_ + _).cellType shouldBe int.cellType.union(dt.cellType)
     }
   }
 }

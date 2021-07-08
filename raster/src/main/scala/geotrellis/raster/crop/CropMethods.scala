@@ -16,7 +16,6 @@
 
 package geotrellis.raster.crop
 
-import geotrellis.vector._
 import geotrellis.raster._
 import geotrellis.util.MethodExtensions
 
@@ -30,19 +29,19 @@ trait CropMethods[T] extends MethodExtensions[T] {
   /**
     * Given a [[GridBounds]] and some cropping options, crop.
     */
-  def crop(gb: GridBounds, options: Options): T
+  def crop(gridBounds: GridBounds[Int], options: Options): T
 
   /**
     * Given a [[GridBounds]], crop.
     */
-  def crop(gb: GridBounds): T =
-    crop(gb, Options.DEFAULT)
+  def crop(gridBounds: GridBounds[Int]): T =
+    crop(gridBounds, Options.DEFAULT)
 
   /**
    * Crop out multiple [[GridBounds]] windows.
    */
-  def crop(windows: Seq[GridBounds]): Iterator[(GridBounds, T)] = {
-    windows.toIterator.map { gb => (gb, crop(gb))}
+  def crop(windows: Seq[GridBounds[Int]]): Iterator[(GridBounds[Int], T)] = {
+    windows.iterator.map { gb => (gb, crop(gb))}
   }
 
   /**

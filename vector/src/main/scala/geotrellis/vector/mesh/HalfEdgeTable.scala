@@ -16,7 +16,7 @@
 
 package geotrellis.vector.mesh
 
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.geom.Coordinate
 
 /** Mutable, non-thread safe class to keep track of half edges
   * during Delaunay triangulation.
@@ -351,7 +351,7 @@ class HalfEdgeTable(_size: Int) extends Serializable {
 
   def showLoop(e0: Int): Unit = {
     foreachInLoop(e0) { e => print(s"[${getSrc(e)} -> ${getDest(e)}] ") }
-    println
+    println()
   }
 
   /**
@@ -371,7 +371,7 @@ class HalfEdgeTable(_size: Int) extends Serializable {
       'l' -> ("show loop", { e => showLoop(e); e }),
       'j' -> (("jump to vertex", { e =>
         print("Enter target vertex: ")
-        val x = scala.io.StdIn.readInt
+        val x = scala.io.StdIn.readInt()
         try {
           edgeIncidentTo(x)
         } catch {
@@ -407,7 +407,7 @@ class HalfEdgeTable(_size: Int) extends Serializable {
 
         scala.io.StdIn.readLine("> ") match {
           case "q" => continue = false
-          case "?" => showHelp
+          case "?" => showHelp()
           case "" => ()
           case str =>
             cmds.get(str.head) match {
@@ -418,10 +418,10 @@ class HalfEdgeTable(_size: Int) extends Serializable {
       } while(continue)
     }
 
-    repl
+    repl()
   }
 
-  private def resize() {
+  private def resize(): Unit = {
     // It's important that size always be a power of 2. We grow our
     // hash table by x4 until it starts getting big, at which point we
     // only grow by x2.

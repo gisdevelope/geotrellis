@@ -16,13 +16,12 @@
 
 package geotrellis.spark.knn
 
-import geotrellis.spark._
 import geotrellis.vector._
 
 import org.apache.spark.rdd.RDD
 
 import java.util.PriorityQueue
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 class BoundedPriorityQueue[A: Ordering](val maxSize: Int) extends Serializable{
   val pq = new PriorityQueue[A](maxSize, implicitly[Ordering[A]].reverse)
@@ -47,7 +46,7 @@ class BoundedPriorityQueue[A: Ordering](val maxSize: Int) extends Serializable{
   def iterator() = pq.iterator
 
   private def maybeReplaceLowest(a: A) = {
-    if (pq.comparator.compare(a, peek) > 0) {
+    if (pq.comparator.compare(a, peek()) > 0) {
       pq.poll
       pq.add(a)
     }
@@ -95,7 +94,7 @@ object KNearestRDD {
       implicit val ord = new Ord[G](h(center), g)
       BoundedPriorityQueue[G](k)
     }
-    def zipWith[A, T](l: Seq[A], r: Seq[A])(f: (A, A) => T): Seq[T] = {
+    def zipWith[A, T](l: List[A], r: List[A])(f: (A, A) => T): List[T] = {
       (l, r) match {
         case (Nil, _) => Nil
         case (_, Nil) => Nil
@@ -105,13 +104,12 @@ object KNearestRDD {
     def merge(a: BoundedPriorityQueue[G], b: BoundedPriorityQueue[G]) = {
       implicit val ord: Ordering[G] = a.pq.comparator.asInstanceOf[Ordering[G]].reverse
       val result = BoundedPriorityQueue[G](a.maxSize)
-      a.iterator.foreach { item => result += item }
-      b.iterator.foreach { item => result += item }
+      a.iterator().asScala.foreach { item => result += item }
+      b.iterator().asScala.foreach { item => result += item }
       result
     }
 
-    val result = rdd.aggregate(zero)({ (bpqs, toAdd) => bpqs.map { _ += toAdd } }, { (a, b) => zipWith(a.toSeq, b.toSeq)(merge).toTraversable })
-    result.map(_.iterator.toList).toList
+    val result = rdd.aggregate(zero)({ (bpqs, toAdd) => bpqs.map { _ += toAdd } }, { (a, b) => zipWith(a.toList, b.toList)(merge).toTraversable })
+    result.map(_.iterator().asScala.toList).toList
   }
 }
-

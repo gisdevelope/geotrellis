@@ -19,15 +19,14 @@ package geotrellis.raster.interpolation
 import geotrellis.raster._
 import geotrellis.vector.interpolation._
 import geotrellis.vector._
-import geotrellis.vector.io._
 import geotrellis.vector.io.json.JsonFeatureCollection
-import geotrellis.raster.testkit._
 
 import spire.syntax.cfor._
-import spray.json.DefaultJsonProtocol._
-import org.scalatest._
 
-class KrigingSpec extends FunSpec with Matchers {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class KrigingSpec extends AnyFunSpec with Matchers {
   def generateLogPoints(pointsData: Seq[PointFeature[Double]]): Seq[PointFeature[Double]] =
     (1 to pointsData.length)
       .map { i => PointFeature(pointsData(i - 1).geom, math.log(pointsData(i - 1).data)) }
@@ -35,7 +34,7 @@ class KrigingSpec extends FunSpec with Matchers {
   describe("Kriging Simple Interpolation : Nickel") {
     val path = "raster/data/nickel.json"
     val f = scala.io.Source.fromFile(path)
-    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]
+    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]()
     f.close()
     val points = generateLogPoints(collection.getAllPointFeatures[Double]())
     val sv: Semivariogram = NonLinearSemivariogram(points.toArray, 30000, 0, Spherical)
@@ -60,7 +59,7 @@ class KrigingSpec extends FunSpec with Matchers {
   describe("Kriging Ordinary Interpolation : Nickel") {
     val path = "raster/data/nickel.json"
     val f = scala.io.Source.fromFile(path)
-    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]
+    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]()
     f.close()
     val points =
       generateLogPoints(collection.getAllPointFeatures[Double]())
@@ -112,7 +111,7 @@ class KrigingSpec extends FunSpec with Matchers {
     }
     val path = "raster/data/venice.json"
     val f = scala.io.Source.fromFile(path)
-    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]
+    val collection = f.mkString.parseGeoJson[JsonFeatureCollection]()
     f.close()
     val veniceData = collection.getAllPointFeatures[Double]()
 
