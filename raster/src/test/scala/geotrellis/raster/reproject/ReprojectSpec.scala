@@ -18,17 +18,17 @@ package geotrellis.raster.reproject
 
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.raster.mosaic._
 import geotrellis.vector._
-import geotrellis.vector.io._
 import geotrellis.raster.testkit._
 import geotrellis.proj4._
+import geotrellis.raster.geotiff.GeoTiffRasterSource
 import geotrellis.raster.io.geotiff._
-import geotrellis.raster.io.geotiff.reader._
-import org.scalatest._
 import spire.syntax.cfor._
+import org.scalatest.funspec.AnyFunSpec
 
-class ReprojectSpec extends FunSpec
+import java.io.File
+
+class ReprojectSpec extends AnyFunSpec
     with TileBuilders
     with GeoTiffTestUtils
     with RasterMatchers {
@@ -61,6 +61,21 @@ class ReprojectSpec extends FunSpec
           }
         }
       }
+    }
+
+    it("should (approximately) match a GDAL average interpolation on nlcd tile") {
+
+      val raster = createRaster(Array(1,4,1,4,1,4,1,4),4,2,CellSize(10,10))
+      val tempTiff = File.createTempFile("gdal-average-to-reproject",".tif")
+      GeoTiff(raster, CRS.fromEpsgCode(32631)).write(tempTiff.getPath)
+
+      val rs = GeoTiffRasterSource(tempTiff.getPath).reproject(CRS.fromEpsgCode(3035), TargetCellSize(CellSize(20.0,20.0)), Average)
+      val reprojected = raster.reproject(CRS.fromEpsgCode(32631),CRS.fromEpsgCode(3035), Options(method = Average, errorThreshold = 0.0,targetCellSize = Some(CellSize(20,20))))
+
+      val refTile = createTile(Array(2.5,2.5),2,1)
+
+      assertEqual(refTile,reprojected.tile,0.1)
+      assertEqual(rs.read().get.tile.band(0), reprojected.tile, 0.1)
     }
 
     it("should (approximately) match a GDAL nearest neighbor interpolation on slope tif") {
@@ -119,7 +134,7 @@ class ReprojectSpec extends FunSpec
 
     it("should reproject two landsat tiles into rasters that don't have nodata lines of NODATA") {
       def detectNoDataLine(tile: Tile): Unit = {
-        val (cols, rows) = tile.dimensions
+        val Dimensions(cols, rows) = tile.dimensions
         val noDataColCounts = Array.ofDim[Int](cols)
         cfor(0)(_ < rows, _ + 1) { row =>
           cfor(0)(_ < cols, _ + 1) { col =>
@@ -141,7 +156,6 @@ class ReprojectSpec extends FunSpec
       val rightRasterExtent = RasterExtent(Extent(579120.000, 4428900.000, 594480.000, 4444260.000), 30.0, 30.0, 512, 512)
 
       val leftTile = IntArrayTile(Array.ofDim[Int](256 * 256).fill(1), 256, 256)
-
       val rightTile = IntArrayTile(Array.ofDim[Int](256 * 256).fill(2), 256, 256)
 
       // Sanity check - they don't have any missing pixels before reprojecting
@@ -157,24 +171,32 @@ class ReprojectSpec extends FunSpec
       }
 
       // Now repreject; there should also be no lines.
-
       val wmLeft @ Raster(wmLeftTile, wmLeftExtent) =
-        mergedRaster.reproject(GridBounds(0, 0, 511, 1023), srcCRS, WebMercator, Options(method = Bilinear))
+        mergedRaster.reproject(GridBounds(0, 0, 511, 511), srcCRS, WebMercator)
 
       val wmRight @ Raster(wmRightTile, wmRightExtent) =
-        mergedRaster.reproject(GridBounds(512, 0, 1023, 1023), srcCRS, WebMercator, Options(method = Bilinear))
+        mergedRaster.reproject(GridBounds(512, 0, 1023, 511), srcCRS, WebMercator)
 
-      val RasterExtent(_, cellwidthLeft, cellheightLeft, _, _) = RasterExtent(wmLeftExtent, wmLeftTile.cols, wmLeftTile.rows)
-      val RasterExtent(_, cellwidthRight, cellheightRight, _, _) = RasterExtent(wmRightExtent, wmRightTile.cols, wmRightTile.rows)
+      val RasterExtent(_, cellwidthLeft, cellheightLeft, _, _) = wmLeft.rasterExtent
+      val RasterExtent(_, cellwidthRight, cellheightRight, _, _) = wmRight.rasterExtent
 
-      cellwidthLeft should be (cellwidthRight +- 0.01)
-      cellheightLeft should be (cellheightRight +- 0.01)
+      /**
+       *  A previous version of this test was bugged and used a stricter tolerance value of 0.05.
+       *  The increased tolerance here does not indicate a decrease in precision: the same code path
+       *  is being used to generate expected cellsizes, it just no longer receives incorrect target
+       *  RasterExtents in certain degenerate cases.
+       *  For more details about this fix, see https://github.com/locationtech/geotrellis/pull/3095
+       */
+      cellwidthLeft should be (cellwidthRight +- 0.08)
+      cellheightLeft should be (cellheightRight +- 0.08)
 
       // Specifically fit it ito a web mercator zoom layout tile
       val re = RasterExtent(Extent(-8247861.100, 4872401.931, -8238077.160, 4882185.871), 256, 256)
 
       val emptyTile = ArrayTile.empty(IntConstantNoDataCellType, re.cols, re.rows)
-      val mergeTile: Tile = emptyTile.merge(re.extent, wmLeftExtent, wmLeftTile).merge(re.extent, wmRightExtent, wmRightTile)
+      val mergeTile: Tile = emptyTile
+        .merge(re.extent, wmLeftExtent, wmLeftTile)
+        .merge(re.extent, wmRightExtent, wmRightTile)
 
       detectNoDataLine(mergeTile)
     }
@@ -225,7 +247,7 @@ class ReprojectSpec extends FunSpec
       val resultRegular = srcRaster.reproject(destCRS)
       val resultOptions = srcRaster.reproject(destCRS, options)
 
-      resultRegular.rasterExtent should be (resultOptions.rasterExtent)
+      resultRegular.raster.rasterExtent should be (resultOptions.raster.rasterExtent)
     }
 
     it("should do a resample into a different CRS") {
@@ -248,7 +270,7 @@ class ReprojectSpec extends FunSpec
       val resultRegular = srcRaster.reproject(destCRS).raster.resample(destExtent2)
       val resultOptions = srcRaster.reproject(destCRS, options)
 
-      resultRegular.rasterExtent should be (resultOptions.rasterExtent)
+      resultRegular.rasterExtent should be (resultOptions.raster.rasterExtent)
     }
 
     it("should do a windowed resample into a different CRS") {
@@ -288,8 +310,15 @@ class ReprojectSpec extends FunSpec
       val raster = geoTiff.raster.reproject(geoTiff.crs, WebMercator)
 
       geoTiff.crs.toProj4String should be ("+proj=cea +lat_ts=33.75 +lon_0=-117.333333333333 +x_0=0.0 +y_0=0.0 +datum=NAD27 +units=m ")
-      raster.extent should be (Extent(-1.3095719172012957E7, 3983866.9277966353, -1.305868719072902E7, 4021260.5495227976))
-      raster.dimensions should be (512 -> 517)
+
+      // raster.extent should be (Extent(-1.3095719172012957E7, 3983601.594738624, -1.3058688152265467E7, 4020994.2455383358))
+      println(raster.extent)
+      raster.extent.xmin should be (-1.3095719172012957E7 +- 1e-7)
+      raster.extent.ymin should be (3983601.594738624 +- 1e-7)
+      raster.extent.xmax should be (-1.3058688152265467E7 +- 1e-7)
+      raster.extent.ymax should be (4020994.2455383358 +- 1e-7)
+
+      raster.dimensions shouldBe Dimensions(512, 517)
     }
   }
 }

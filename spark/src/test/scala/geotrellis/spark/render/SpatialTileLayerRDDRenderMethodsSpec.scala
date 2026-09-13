@@ -18,21 +18,15 @@ package geotrellis.spark.render
 
 import geotrellis.raster._
 import geotrellis.raster.testkit._
-import geotrellis.raster.render._
 import geotrellis.spark._
-import geotrellis.spark.render._
 import geotrellis.spark.testkit.testfiles._
 import geotrellis.spark.testkit._
-import geotrellis.spark.io.hadoop._
 import geotrellis.spark.testkit._
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
 
-class SpatialTileRDDRenderMethodsSpec extends FunSpec
-    with TestEnvironment
-    with TileBuilders
-    with RasterMatchers
-    with TileLayerRDDBuilders {
+class SpatialTileLayerRDDRenderMethodsSpec extends AnyFunSpec with TestEnvironment with TileBuilders with RasterMatchers with TileLayerRDDBuilders {
+
   lazy val sample = TestFiles.generateSpatial("all-ones")
   val tmpdir = System.getProperty("java.io.tmpdir")
 
@@ -50,7 +44,7 @@ class SpatialTileRDDRenderMethodsSpec extends FunSpec
       import geotrellis.raster.io.geotiff._
       val tiff = SinglebandGeoTiff(new java.io.File(inputHomeLocalPath, "elevation.tif").getAbsolutePath)
 
-      val (raster, rdd) = createTileLayerRDD(tiff.raster.mapTile(_.toArrayTile), 100, 100, tiff.crs)
+      val (raster, rdd) = createTileLayerRDD(tiff.raster.mapTile(_.toArrayTile()), 100, 100, tiff.crs)
 
       val colorMap =
         ColorMap(
@@ -69,7 +63,7 @@ class SpatialTileRDDRenderMethodsSpec extends FunSpec
         )
 
       val expected = raster.tile.color(colorMap)
-      val actual = rdd.color(colorMap).stitch
+      val actual = rdd.color(colorMap).stitch()
 
       assertEqual(actual, expected)
     }

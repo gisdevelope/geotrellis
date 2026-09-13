@@ -16,17 +16,18 @@
 
 package geotrellis.vector.conf
 
-import geotrellis.util.LazyLogging
+import org.locationtech.jts.geom.PrecisionModel
+import org.locationtech.jts.precision.GeometryPrecisionReducer
 
-import com.vividsolutions.jts.geom.PrecisionModel
-import com.vividsolutions.jts.precision.GeometryPrecisionReducer
+import pureconfig.ConfigSource
+import pureconfig.generic.auto._
 
 case class Simplification(scale: Double = 1e12) {
   // 12 digits is maximum to avoid [[TopologyException]], see https://web.archive.org/web/20160226031453/http://tsusiatsoftware.net/jts/jts-faq/jts-faq.html#D9
   lazy val simplifier: GeometryPrecisionReducer = new GeometryPrecisionReducer(new PrecisionModel(scale))
 }
 case class Precision(`type`: String = "floating")
-case class JtsConfig(precision: Precision = Precision(), simplification: Simplification = Simplification()) extends LazyLogging {
+case class JtsConfig(precision: Precision = Precision(), simplification: Simplification = Simplification()) {
   val precisionType: String = precision.`type`
   val precisionModel: PrecisionModel = precisionType match {
     case "floating" => new PrecisionModel()
@@ -38,6 +39,6 @@ case class JtsConfig(precision: Precision = Precision(), simplification: Simplif
 }
 
 object JtsConfig {
-  lazy val conf: JtsConfig = pureconfig.loadConfigOrThrow[JtsConfig]("geotrellis.jts")
+  lazy val conf: JtsConfig = ConfigSource.default.at("geotrellis.jts").loadOrThrow[JtsConfig]
   implicit def jtsConfigToClass(obj: JtsConfig.type): JtsConfig = conf
 }

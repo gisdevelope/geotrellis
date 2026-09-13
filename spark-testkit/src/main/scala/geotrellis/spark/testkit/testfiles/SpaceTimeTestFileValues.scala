@@ -16,7 +16,7 @@
 
 package geotrellis.spark.testkit.testfiles
 
-import geotrellis.spark._
+import geotrellis.layer.SpaceTimeKey
 import geotrellis.raster._
 
 import spire.syntax.cfor._

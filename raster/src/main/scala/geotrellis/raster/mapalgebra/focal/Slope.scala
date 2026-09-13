@@ -44,13 +44,13 @@ import geotrellis.raster.mapalgebra.focal.Angles._
   */
 object Slope {
 
-  def apply(r: Tile, n: Neighborhood, bounds: Option[GridBounds], cs: CellSize, z: Double, target: TargetCell = TargetCell.All): Tile = {
+  def apply(r: Tile, n: Neighborhood, bounds: Option[GridBounds[Int]], cs: CellSize, z: Double, target: TargetCell = TargetCell.All): Tile = {
     new SurfacePointCalculation[Tile](r, n, bounds, cs, target)
       with DoubleArrayTileResult
     {
       val zFactor = z
 
-      def setValue(x: Int, y: Int, s: SurfacePoint) {
+      def setValue(x: Int, y: Int, s: SurfacePoint): Unit = {
         resultTile.setDouble(x, y, degrees(s.slope(zFactor)))
       }
     }

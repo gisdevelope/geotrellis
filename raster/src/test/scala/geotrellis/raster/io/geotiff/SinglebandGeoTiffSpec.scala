@@ -18,13 +18,12 @@ package geotrellis.raster.io.geotiff
 
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.raster.io.geotiff.reader._
 import geotrellis.raster.testkit.RasterMatchers
 
-import spire.syntax.cfor._
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class SinglebandGeoTiffSpec extends FunSpec with Matchers with RasterMatchers with GeoTiffTestUtils {
+class SinglebandGeoTiffSpec extends AnyFunSpec with Matchers with RasterMatchers with GeoTiffTestUtils {
   describe("Building Overviews") {
     val tiff = SinglebandGeoTiff(geoTiffPath("overviews/singleband.tif"), true)
 
@@ -40,6 +39,12 @@ class SinglebandGeoTiffSpec extends FunSpec with Matchers with RasterMatchers wi
       assertEqual(ovr.tile, wit.overviews.head.tile)
       assert(wit.overviews.last.tile.cols <= GeoTiff.DefaultBlockSize)
       assert(wit.overviews.last.tile.rows <= GeoTiff.DefaultBlockSize)
+    }
+
+    it("should be able to attach overviews manually") {
+      val ovr = tiff.buildOverview(NearestNeighbor, 2)
+      val withOvr = tiff.withOverviews(Seq(ovr))
+      withOvr.overviews should be (List(ovr))
     }
 
     it("should default to power of 2 overviews") {

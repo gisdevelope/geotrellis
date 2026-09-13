@@ -27,11 +27,11 @@ object AsciiWriter {
   def cellType = "ascii"
   def dataType = ""
 
-  def write(path: String, raster: Tile, extent: Extent, name: String) {
+  def write(path: String, raster: Tile, extent: Extent, name: String): Unit = {
     write(path, raster, extent, name, NODATA)
   }
 
-  def write(path: String, raster: Tile, extent: Extent, name: String, noData: Int) {
+  def write(path: String, raster: Tile, extent: Extent, name: String, noData: Int): Unit = {
     val g = RasterExtent(extent, raster.cols, raster.rows)
     val e = extent
 
@@ -46,7 +46,7 @@ object AsciiWriter {
     pw.write("cellsize %.12f\n".formatLocal(Locale.ENGLISH, g.cellwidth))
     pw.write(s"nodata_value $noData\n")
 
-    val data = raster.toArray
+    val data = raster.toArray()
 
     var y = 0
     while (y < g.rows) {

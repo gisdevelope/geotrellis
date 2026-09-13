@@ -18,7 +18,7 @@ package geotrellis.raster.io.geotiff
 
 import java.io.File
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
 
 object GeoTiffTestUtils {
   val testDirPath = "raster/data/geotiff-test-files"
@@ -34,6 +34,12 @@ trait GeoTiffTestUtils extends Matchers {
   }
 
   def baseDataPath = "raster/data"
+
+  def baseGeoTiffPath(name: String): String = {
+    val path = s"$baseDataPath/$name"
+    require(new File(path).exists, s"$path does not exist, unzip the archive?")
+    path
+  }
 
   val Epsilon = 1e-9
 

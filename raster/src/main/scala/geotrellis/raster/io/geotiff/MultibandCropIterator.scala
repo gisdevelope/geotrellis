@@ -17,7 +17,6 @@
 package geotrellis.raster.io.geotiff
 
 import geotrellis.util.ByteReader
-import geotrellis.raster._
 
 /**
  * An extension of [[CropIterator]], this subclass works specifically with
@@ -33,7 +32,7 @@ class MultibandCropIterator(geoTiff: MultibandGeoTiff,
   windowedCols: Int,
   windowedRows: Int) extends CropIterator(geoTiff, windowedCols, windowedRows) {
 
-  def next: MultibandGeoTiff = {
+  def next(): MultibandGeoTiff = {
     if (hasNext) {
       if (colCount + 1 > colIterations)
         adjustValues

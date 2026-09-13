@@ -19,18 +19,17 @@ package geotrellis.raster.hydrology
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
 import geotrellis.raster.testkit._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class FillSpec extends FunSpec 
-                  with Matchers 
-                  with RasterMatchers 
-                  with TileBuilders {
+class FillSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("Fill"){
     it("Returns a new raster with sinks removed"){
       val ncols = 3
       val nrows = 3
-      val re = RasterExtent(Extent(0,0,1,1),1,1,ncols,nrows)
+      val re = RasterExtent(Extent(0,0,1,1),ncols,nrows)
       val m = IntArrayTile(Array[Int](
             1,2,3,
             4,55,6,
@@ -43,7 +42,7 @@ class FillSpec extends FunSpec
             7,8,9),
             ncols,nrows)
       assertEqual(m.fill(20), o)
-    } 
+    }
 
     it("Does not remove non-sink even past the threshold"){
       val ncols = 3
@@ -55,6 +54,6 @@ class FillSpec extends FunSpec
             ncols,nrows)
 
       assertEqual(m.fill(50), m)
-    } 
+    }
   }
 }

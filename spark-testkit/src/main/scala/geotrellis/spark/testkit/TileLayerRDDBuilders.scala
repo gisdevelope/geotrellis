@@ -19,16 +19,13 @@ package geotrellis.spark.testkit
 import geotrellis.proj4._
 import geotrellis.vector._
 import geotrellis.raster._
-import geotrellis.raster.resample._
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.spark.ingest._
-
 import org.apache.spark._
 import org.apache.spark.rdd.RDD
 import jp.ne.opt.chronoscala.Imports._
+import java.time.ZonedDateTime
 
-import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.mutable
 
 object TileLayerRDDBuilders extends TileLayerRDDBuilders
@@ -145,6 +142,12 @@ trait TileLayerRDDBuilders {
   }
 
   def createTileLayerRDD(
+    raster: Raster[Tile],
+    tileLayout: TileLayout
+  )(implicit sc: SparkContext): TileLayerRDD[SpatialKey] =
+    createTileLayerRDD(sc, raster, tileLayout, defaultCRS)
+
+  def createTileLayerRDD(
     sc: SparkContext,
     raster: Raster[Tile],
     tileLayout: TileLayout
@@ -172,6 +175,12 @@ trait TileLayerRDDBuilders {
     tileLayout: TileLayout
   )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
     createMultibandTileLayerRDD(sc, tile, tileLayout)
+
+  def createMultibandTileLayerRDD(
+    raster: Raster[MultibandTile],
+    tileLayout: TileLayout
+  )(implicit sc: SparkContext): MultibandTileLayerRDD[SpatialKey] =
+    createMultibandTileLayerRDD(sc, raster, tileLayout)
 
   def createMultibandTileLayerRDD(
     sc: SparkContext,
@@ -266,6 +275,6 @@ trait TileLayerRDDBuilders {
         }
     }
 
-    new ContextRDD(sc.parallelize(tmsTiles), metadata)
+    new ContextRDD(sc.parallelize(tmsTiles.toSeq), metadata)
   }
 }

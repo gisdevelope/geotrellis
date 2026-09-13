@@ -20,15 +20,14 @@ import geotrellis.raster.summary._
 import geotrellis.raster._
 import geotrellis.raster.testkit._
 
-import org.scalatest._
 import spire.syntax.cfor._
-
 import scala.collection.mutable
 
-class ZonalStatisticsSpec extends FunSpec
-                            with Matchers
-                            with RasterMatchers
-                            with TileBuilders {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class ZonalStatisticsSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("ZonalStatistics") {
     val r = createTile(
       Array(1, 1, 3, 3,
@@ -57,9 +56,9 @@ class ZonalStatisticsSpec extends FunSpec
     }
 
     val expected =
-      zoneValues.toMap.mapValues { list =>
-        list.distinct
-            .map { v => (v, list.filter(_ == v).length) }
+      zoneValues.toMap.map { case (k, list) =>
+        k -> list.distinct
+            .map { v => (v, list.count(_ == v)) }
             .toMap
       }
 

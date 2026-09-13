@@ -17,11 +17,9 @@
 package geotrellis.raster
 
 import geotrellis.raster.split.Split
-import geotrellis.vector.Extent
 
 import spire.syntax.cfor._
 
-import scala.collection.mutable
 
 /**
   * The companion object for the [[CompositeTile]] type.
@@ -154,7 +152,7 @@ case class CompositeTile(tiles: Seq[Tile],
     *
     * @return  The MutableArrayTile
     */
-  def mutable(): MutableArrayTile =
+  def mutable: MutableArrayTile =
     mutable(cellType)
 
   /**
@@ -166,9 +164,6 @@ case class CompositeTile(tiles: Seq[Tile],
     if (cols.toLong * rows.toLong > Int.MaxValue.toLong) {
       sys.error("This tiled raster is too big to convert into an array.")
     } else {
-      if(targetCellType.isFloatingPoint != cellType.isFloatingPoint)
-        logger.warn(s"Conversion from $cellType to $targetCellType may lead to data loss.")
-
       val tile = ArrayTile.alloc(targetCellType, cols, rows)
       val len = cols * rows
       val layoutCols = tileLayout.layoutCols
@@ -279,7 +274,7 @@ case class CompositeTile(tiles: Seq[Tile],
     *
     * @return  An array of bytes
     */
-  def toBytes(): Array[Byte] = toArrayTile.toBytes
+  def toBytes(): Array[Byte] = toArrayTile().toBytes()
 
   /**
     * Fetch the datum at the given column and row of the
@@ -541,9 +536,9 @@ case class CompositeTile(tiles: Seq[Tile],
     * @return         The result, an Tile
     */
   def combine(other: Tile)(f: (Int, Int) => Int): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
-    val result = ArrayTile.alloc(cellType, cols, rows)
+    val result = ArrayTile.alloc(cellType.union(other.cellType), cols, rows)
     val layoutCols = tileLayout.layoutCols
     val layoutRows = tileLayout.layoutRows
     val tileCols = tileLayout.tileCols
@@ -576,7 +571,7 @@ case class CompositeTile(tiles: Seq[Tile],
     * @return         The result, an Tile
     */
   def combineDouble(other: Tile)(f: (Double, Double) => Double): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
     val result = ArrayTile.alloc(cellType, cols, rows)
     val layoutCols = tileLayout.layoutCols
@@ -624,7 +619,7 @@ case class CompositeTile(tiles: Seq[Tile],
           }
           if(layoutCol != tileLayout.layoutCols - 1) {
             val pad = " " * 5
-            sb.append(s"$pad| ")r
+            sb.append(s"$pad| ").toString.r
           }
         }
         sb.append(s"\n")

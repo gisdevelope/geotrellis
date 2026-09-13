@@ -73,6 +73,27 @@ sign the Eclipse Contributor Agreement. You can electronically sign the
 `Eclipse Contributor Agreement
 here <https://www.eclipse.org/legal/ECA.php>`__.
 
+Contribution Questionnaire
+--------------------------
+
+Visit `https://gitlab.eclipse.org/eclipsefdn/emo-team/iplab/-/wikis/Requesting-a-Review <https://gitlab.eclipse.org/eclipsefdn/emo-team/iplab/-/wikis/Requesting-a-Review>`__
+for more details.
+
+- Run the dependencies list generation command: ``sbt "dependencyListGT/toFile target/dependencies-list.txt"`` or ``sbt "dependencyListGTFast target/dependencies-list.txt"``
+
+  - It is going to produce the output file with all project compile time dependencies stored in the ``target/dependencies-list.txt`` file.
+
+- Download the Latest version of `DashLicenses <https://repo.eclipse.org/service/local/artifact/maven/redirect?r=dash-licenses&g=org.eclipse.dash&a=org.eclipse.dash.licenses&v=LATEST>`__
+
+  - More info and usage examples can be found here: `https://github.com/eclipse/dash-licenses <https://github.com/eclipse/dash-licenses>`__
+
+- Run the dependencies check ``cat target/dependencies-list.txt | java -jar ./org.eclipse.dash.licenses-1.0.3-20230602.055020-10.jar -``
+
+- It is possible to use the `IP Team Review request feature <https://github.com/eclipse/dash-licenses/blob/master/README.md#automatic-ip-team-review-requests>`__ to automatically set up a review
+
+  - Get `GitLab authentication token <https://gitlab.eclipse.org/-/profile/personal_access_tokens>`__
+  - ``cat target/dependencies-list.txt | java -jar ./org.eclipse.dash.licenses-1.0.3-20230602.055020-10.jar - -review -project locationtech.geotrellis -token <token>``
+
 Editing these Docs
 ------------------
 

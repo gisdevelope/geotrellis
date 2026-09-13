@@ -37,13 +37,13 @@ class SurfacePoint() {
   var `dz/dy` = Double.NaN
 
   def aspectAzimuth() = {
-    if (`dz/dx` == 0 && `dz/dy` == 0) {
+    if (Math.abs(`dz/dx`) <= 1E-10 && Math.abs(`dz/dy`) <= 1E-10) {
       /* Flat area */
       -1.0
     } else {
       var aAzimuth = toDegrees(atan2(`dz/dy`, `dz/dx`) - Pi * 0.5)
       if (aAzimuth < 0) { aAzimuth += 360.0 }
-      if (aAzimuth == 360.0) { aAzimuth = 0.0 }
+      if (Math.abs(aAzimuth - 360.0) <= 1E-10) { aAzimuth = 0.0 }
       aAzimuth
     }
   }
@@ -116,7 +116,7 @@ class SurfacePoint() {
  * For edge cells, the neighborhood points that lie outside the extent of the raster
  * will be counted as having the same value as the focal point.
  */
-abstract class SurfacePointCalculation[T](r: Tile, n: Neighborhood, analysisArea: Option[GridBounds], val cellSize: CellSize, target: TargetCell = TargetCell.All)
+abstract class SurfacePointCalculation[T](r: Tile, n: Neighborhood, analysisArea: Option[GridBounds[Int]], val cellSize: CellSize, target: TargetCell = TargetCell.All)
   extends FocalCalculation[T](r, n, analysisArea, target)
 {
   // Use trait instead of Function3 to avoid boxing

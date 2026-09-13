@@ -1,4 +1,4 @@
-import sbt._
+import sbt.*
 
 /**
  * Copied, with some modifications, from https://github.com/milessabin/shapeless/blob/master/project/Boilerplate.scala
@@ -8,7 +8,7 @@ import sbt._
  */
 
 object Boilerplate {
-  import scala.StringContext._
+  import scala.StringContext.*
 
   implicit final class BlockHelper(val sc: StringContext) extends AnyVal {
     def block(args: Any*): String = {
@@ -378,7 +378,7 @@ object GenMacroSegmentCombiner extends Template {
         -            set(segmentCombiner)(j, segment, i, segment, ${diffsArgs})
         -            j += 1
         -          }
-        -          arr(segmentIndex) = compressor.compress(segmentCombiner.getBytes, segmentIndex)
+        -          arr(segmentIndex) = compressor.compress(segmentCombiner.getBytes(), segmentIndex)
         -        }
         -        (arr, compressor)
         -    } else {
@@ -393,7 +393,7 @@ object GenMacroSegmentCombiner extends Template {
         -        cfor(0)(_ < segmentSize, _ + 1) { i =>
         -          set(segmentCombiner)(${segmentArgs}, i)
         -        }
-        -        arr(segmentIndex) = compressor.compress(segmentCombiner.getBytes, segmentIndex)
+        -        arr(segmentIndex) = compressor.compress(segmentCombiner.getBytes(), segmentIndex)
         -      }
         -      (arr, compressor)
         -    }

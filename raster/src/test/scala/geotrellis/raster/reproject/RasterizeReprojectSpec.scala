@@ -22,16 +22,15 @@ import geotrellis.raster.resample._
 import geotrellis.raster.testkit._
 import geotrellis.vector._
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
 
-class RasterizeReprojectSpec extends FunSpec
-    with RasterMatchers {
+class RasterizeReprojectSpec extends AnyFunSpec with RasterMatchers {
 
   describe("Rasterizing reprojection") {
     it("should fill in only valid region") {
       val coloRaster: ProjectedRaster[Tile] = ProjectedRaster.apply(Raster[Tile](IntArrayTile.fill(1,700,400), Extent(-109,37,-102,41)), LatLng)
       val destRegion = coloRaster.projectedExtent.reprojectAsPolygon(ConusAlbers, 0.005)
-      val destRE = ProjectedRasterExtent(destRegion.envelope, ConusAlbers, 1000, 800)
+      val destRE = ProjectedRasterExtent(destRegion.extent, ConusAlbers, 1000, 800)
       val reprojected = coloRaster.regionReproject(destRE, NearestNeighbor)
       val trans = Proj4Transform(ConusAlbers, LatLng)
 
@@ -42,7 +41,7 @@ class RasterizeReprojectSpec extends FunSpec
       val errTile = IntArrayTile.ofDim(reprojected.cols, reprojected.rows)
 
       reprojected.tile.foreach{ (px, py, v) =>
-        val (x, y) = reprojected.rasterExtent.gridToMap(px, py)
+        val (x, y) = reprojected.raster.rasterExtent.gridToMap(px, py)
         val (tx, ty) = trans(x, y)
         val dist = ex.distance(Point(tx, ty))
         if (dist > 1.2e-3) {

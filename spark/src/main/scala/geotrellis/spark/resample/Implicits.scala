@@ -18,11 +18,7 @@ package geotrellis.spark.resample
 
 import geotrellis.raster._
 import geotrellis.raster.resample._
-import geotrellis.spark._
-import geotrellis.spark.tiling._
-import geotrellis.util._
-import geotrellis.vector._
-
+import geotrellis.layer._
 import org.apache.spark.rdd._
 
 object Implicits extends Implicits
@@ -30,6 +26,6 @@ object Implicits extends Implicits
 trait Implicits {
   implicit class withLayerRDDZoomResampleMethods[
     K: SpatialComponent,
-    V <: CellGrid: (? => TileResampleMethods[V])
+    V <: CellGrid[Int]: * => TileResampleMethods[V]
   ](self: RDD[(K, V)] with Metadata[TileLayerMetadata[K]]) extends LayerRDDZoomResampleMethods[K, V](self)
 }

@@ -16,16 +16,17 @@
 
 package geotrellis.spark.stitch
 
+import geotrellis.layer._
+import geotrellis.proj4.LatLng
 import geotrellis.raster._
 import geotrellis.raster.testkit._
-import geotrellis.raster.io.geotiff.SinglebandGeoTiff
 import geotrellis.spark._
 import geotrellis.spark.testkit._
 import geotrellis.vector.Extent
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class CollectionStitchMethodsSpec extends FunSpec
+class CollectionStitchMethodsSpec extends AnyFunSpec
     with TileBuilders
     with TileLayerRDDBuilders
     with TestEnvironment {
@@ -53,7 +54,7 @@ class CollectionStitchMethodsSpec extends FunSpec
           TileLayout(2, 2, 4, 4)
         ).toCollection
 
-      assertEqual(tile, layer.stitch.tile)
+      assertEqual(tile, layer.stitch().tile)
     }
 
     it("should correctly stitch back together multi band tile collection") {
@@ -97,7 +98,96 @@ class CollectionStitchMethodsSpec extends FunSpec
           TileLayout(2, 2, 4, 4)
         ).toCollection
 
-      assertEqual(tile, layer.stitch.tile)
+      assertEqual(tile, layer.stitch().tile)
     }
+
+    it("should correctly sparse stitch a singleband tile with an offset extent") {
+      val expectedTile =
+        createTile(
+          Array(
+            NaN, NaN, NaN, NaN, NaN,
+            1, 1,  1, 1, NaN,
+            1, 1,  1, 1, NaN,
+            1, 1,  1, 1, NaN,
+            1, 1,  1, 1, NaN
+          ), 5, 5)
+
+      val tile =
+        createTile(
+          Array(
+            1, 1,  1, 1,
+            1, 1,  1, 1,
+            1, 1,  1, 1,
+            1, 1,  1, 1
+          ), 4, 4)
+      val extent = Extent(0, 0, 4, 4)
+      val layer =
+        createTileLayerRDD(
+          Raster(tile, extent),
+          TileLayout(4, 4, 1, 1)
+        ).toCollection
+      val testExtent = Extent(0, 0, 5, 5)
+      assertEqual(layer.sparseStitch(testExtent).get.tile, expectedTile)
+    }
+  }
+
+  it("should correctly sparse stitch a multiband tile with an offset extent") {
+    val expectedTile = ArrayMultibandTile(
+      createTile(Array(NaN, NaN, NaN, 1, 1, NaN, 1, 1, NaN), 3, 3),
+      createTile(Array(NaN, NaN, NaN, 2, 2, NaN, 2, 2, NaN), 3, 3)
+    )
+    val tile1 =
+      createTile(
+        Array(
+          1, 1,
+          1, 1
+        ), 2, 2)
+    val tile2 =
+      createTile(
+        Array(
+          2, 2,
+          2, 2
+        ), 2, 2)
+    val tile = ArrayMultibandTile(tile1, tile2)
+    val extent = Extent(0, 0, 2, 2)
+    val layer =
+      createMultibandTileLayerRDD(
+        Raster(tile, extent),
+        TileLayout(2, 2, 1, 1)
+      ).toCollection
+    val testExtent = Extent(0, 0, 3, 3)
+    assertEqual(layer.sparseStitch(testExtent).get.tile, expectedTile)
+  }
+
+  it("should correctly sparse stitch a singleband tile using the raster tile extent") {
+    val tile =
+      createTile(
+        Array(
+          1, 1,  1, 1,
+          1, 1,  1, 1,
+          1, 1,  1, 1,
+          1, 1,  1, 1
+        ), 4, 4)
+    val extent = Extent(0, 0, 4, 4)
+    val layer =
+      createTileLayerRDD(
+        Raster(tile, extent),
+        TileLayout(4, 4, 1, 1)
+      ).toCollection
+    assertEqual(layer.sparseStitch().get.tile, tile)
+  }
+
+  it("should correctly sparse stitch an empty collection") {
+    val extent = Extent(0, 0, 4, 4)
+    val md = TileLayerMetadata(
+      IntConstantNoDataCellType,
+      LayoutDefinition(extent,TileLayout(4, 4, 1, 1)),
+      extent,
+      LatLng,
+      KeyBounds(SpatialKey(0,0), SpatialKey(3,3))
+    )
+    val layer = ContextCollection(Seq.empty[(SpatialKey, Tile)], md)
+
+    layer.sparseStitch() shouldBe None
   }
 }

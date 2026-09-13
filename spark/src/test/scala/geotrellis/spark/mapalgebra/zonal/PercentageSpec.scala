@@ -16,23 +16,19 @@
 
 package geotrellis.spark.mapalgebra.zonal
 
-import Implicits._
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
 import geotrellis.spark.testkit.testfiles._
 import geotrellis.spark.testkit._
 
 import geotrellis.raster._
-import geotrellis.raster.stitch._
-import geotrellis.raster.mapalgebra.zonal._
 
-import geotrellis.vector._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 import org.apache.spark.rdd.RDD
 import spire.syntax.cfor._
 
-class PercentageSpec extends FunSpec with TestEnvironment with TestFiles {
+class PercentageSpec extends AnyFunSpec with TestEnvironment with TestFiles {
 
   describe("Percentage Zonal Operation") {
     it("gives correct percentage for example raster rdds") {
@@ -70,8 +66,8 @@ class PercentageSpec extends FunSpec with TestEnvironment with TestFiles {
         TileLayout(3, 4, 3, 2)
       )
 
-      val actual = rdd.zonalPercentage(zonesRDD).stitch
-      val expected = rdd.stitch.zonalPercentage(zonesRDD.stitch)
+      val actual = rdd.zonalPercentage(zonesRDD).stitch()
+      val expected = rdd.stitch().zonalPercentage(zonesRDD.stitch())
 
       (actual.cols, actual.rows) should be (expected.cols, expected.rows)
 
@@ -85,7 +81,5 @@ class PercentageSpec extends FunSpec with TestEnvironment with TestFiles {
         }
       }
     }
-
   }
-
 }

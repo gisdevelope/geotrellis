@@ -17,8 +17,7 @@
 package geotrellis.raster.render
 
 import geotrellis.raster._
-import geotrellis.raster.render.png._
-import geotrellis.raster.histogram.Histogram
+import geotrellis.raster.render.png.{Settings, PaethFilter, PngEncoder, RgbaPngEncoding, PngColorEncoding}
 import geotrellis.util.MethodExtensions
 
 
@@ -52,7 +51,7 @@ trait PngRenderMethods extends MethodExtensions[Tile] {
 
   def renderPng(colorRamp: ColorRamp): Png = {
     if(self.cellType.isFloatingPoint) {
-      val histogram = self.histogramDouble
+      val histogram = self.histogramDouble()
       renderPng(ColorMap.fromQuantileBreaks(histogram, colorRamp))
     } else {
       val histogram = self.histogram

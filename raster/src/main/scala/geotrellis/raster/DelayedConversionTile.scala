@@ -16,10 +16,7 @@
 
 package geotrellis.raster
 
-import geotrellis.raster.resample._
-import geotrellis.vector.Extent
 
-import spire.syntax.cfor._
 
 /**
   * [DelayedConversionTile]] represents a tile that wraps an inner tile,
@@ -31,8 +28,8 @@ import spire.syntax.cfor._
 class DelayedConversionTile(inner: Tile, targetCellType: CellType)
   extends Tile {
 
-  val cols = inner.cols
-  val rows = inner.rows
+  val cols: Int = inner.cols
+  val rows: Int = inner.rows
 
   def cellType: CellType =
     inner.cellType
@@ -52,11 +49,11 @@ class DelayedConversionTile(inner: Tile, targetCellType: CellType)
   def interpretAs(newCellType: CellType): Tile =
     withNoData(None).convert(newCellType)
 
-  def toArray = inner.toArray
+  def toArray(): Array[Int] = inner.toArray()
 
-  def toArrayDouble = inner.toArrayDouble
+  def toArrayDouble(): Array[Double] = inner.toArrayDouble()
 
-  def toArrayTile: ArrayTile = mutable
+  def toArrayTile(): ArrayTile = mutable
 
   def mutable: MutableArrayTile = {
     val tile = ArrayTile.alloc(targetCellType, cols, rows)
@@ -74,7 +71,7 @@ class DelayedConversionTile(inner: Tile, targetCellType: CellType)
     tile
   }
 
-  def toBytes(): Array[Byte] = toArrayTile.toBytes
+  def toBytes(): Array[Byte] = toArrayTile().toBytes()
   def foreach(f: Int => Unit): Unit = inner.foreach(f)
   def foreachDouble(f: Double => Unit): Unit = inner.foreachDouble(f)
   def foreachIntVisitor(visitor: IntTileVisitor): Unit = inner.foreachIntVisitor(visitor)
@@ -157,7 +154,7 @@ class DelayedConversionTile(inner: Tile, targetCellType: CellType)
     * @return         The result, an [[ArrayTile]] with the target [[CellType]] of this DelayedConversionTile.
     */
   def combine(other: Tile)(f: (Int, Int) => Int): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
     val tile = ArrayTile.alloc(targetCellType, cols, rows)
 
     inner.foreach { (col, row, z) =>
@@ -178,7 +175,7 @@ class DelayedConversionTile(inner: Tile, targetCellType: CellType)
     * @return         The result, an [[ArrayTile]] with the target [[CellType]] of this DelayedConversionTile.
     */
   def combineDouble(other: Tile)(f: (Double, Double) => Double): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
     val tile = ArrayTile.alloc(targetCellType, cols, rows)
 
     inner.foreachDouble { (col, row, z) =>
@@ -187,4 +184,6 @@ class DelayedConversionTile(inner: Tile, targetCellType: CellType)
 
     tile
   }
+
+  override def toString: String = s"DelayedConversionTile($cols,$rows,$cellType)"
 }

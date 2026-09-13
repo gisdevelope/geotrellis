@@ -16,9 +16,8 @@
 
 package geotrellis.spark.pyramid
 
+import geotrellis.layer._
 import geotrellis.spark._
-import geotrellis.spark.stitch._
-import geotrellis.spark.tiling._
 import geotrellis.proj4._
 import geotrellis.raster._
 import geotrellis.vector._
@@ -27,9 +26,11 @@ import geotrellis.spark.testkit._
 import jp.ne.opt.chronoscala.Imports._
 
 import java.time.{ZoneOffset, ZonedDateTime}
-import org.scalatest._
 
-class PyramidSpec extends FunSpec with Matchers with TestEnvironment {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class PyramidSpec extends AnyFunSpec with Matchers with TestEnvironment {
 
   describe("Pyramid") {
     it("should work with SpaceTimeKey rasters") {
@@ -90,15 +91,15 @@ class PyramidSpec extends FunSpec with Matchers with TestEnvironment {
         val multi =
           if(key.temporalKey.instant == dt1.toInstant.toEpochMilli) 1
           else 10
-        key.spatialKey match {
+        (key.spatialKey: @unchecked) match {
           case SpatialKey(0, 0) =>
-            tile.toArray.distinct should be (Array(1 * multi))
+            tile.toArray().distinct should be (Array(1 * multi))
           case SpatialKey(1, 0) =>
-            tile.toArray.distinct should be (Array(2 * multi))
+            tile.toArray().distinct should be (Array(2 * multi))
           case SpatialKey(0, 1) =>
-            tile.toArray.distinct should be (Array(3 * multi))
+            tile.toArray().distinct should be (Array(3 * multi))
           case SpatialKey(1, 1) =>
-            tile.toArray.distinct should be (Array(4 * multi))
+            tile.toArray().distinct should be (Array(4 * multi))
         }
       }
     }
@@ -189,15 +190,15 @@ class PyramidSpec extends FunSpec with Matchers with TestEnvironment {
         val multi =
           if(key.temporalKey.instant == dt1.toInstant.toEpochMilli) 1
           else 10
-        key.spatialKey match {
+        (key.spatialKey: @unchecked) match {
           case SpatialKey(0, 0) =>
-            tile.toArray.distinct should be (Array(1 * multi))
+            tile.toArray().distinct should be (Array(1 * multi))
           case SpatialKey(1, 0) =>
-            tile.toArray.distinct should be (Array(2 * multi))
+            tile.toArray().distinct should be (Array(2 * multi))
           case SpatialKey(0, 1) =>
-            tile.toArray.distinct should be (Array(3 * multi))
+            tile.toArray().distinct should be (Array(3 * multi))
           case SpatialKey(1, 1) =>
-            tile.toArray.distinct should be (Array(4 * multi))
+            tile.toArray().distinct should be (Array(4 * multi))
         }
       }
     }
@@ -223,16 +224,16 @@ class PyramidSpec extends FunSpec with Matchers with TestEnvironment {
       val baseLayer = createTileLayerRDD(tile, tileLayout)
 
       // Build pyramid using Average resampling
-      val pyramid = Pyramid.fromLayerRdd(baseLayer)
+      val pyramid = Pyramid.fromLayerRDD(baseLayer)
 
       // The 1 tile top of the pyramid should be set to zoom 0, base layer numbered accordingly
       assert(pyramid.minZoom == 0)
       assert(pyramid.maxZoom == 2)
 
-      val tile2x2 = pyramid(0).stitch
+      val tile2x2 = pyramid(0).stitch().tile
 
       // should end up with the proper top-level tile
-      assert(tile2x2.dimensions == (2, 2))
+      assert(tile2x2.dimensions == Dimensions(2, 2))
       assertEqual(tile2x2, Array(1,2,3,4))
     }
   }

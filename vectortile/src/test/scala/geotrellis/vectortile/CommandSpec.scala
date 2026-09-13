@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Azavea
+ * Copyright 2019 Azavea
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 
 package geotrellis.vectortile
 
-import org.scalatest._
 import geotrellis.vectortile.internal.Command._
-import geotrellis.vectortile.internal.{ MoveTo, LineTo, ClosePath }
+import geotrellis.vectortile.internal.{MoveTo, LineTo, ClosePath}
+
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
 // --- //
 
-class CommandSpec extends FunSpec with Matchers {
+class CommandSpec extends AnyFunSpec with Matchers {
   describe("Z-encoding") {
     val ns: Array[Int] = Array(0,-1,1,-2,2,-3,3)
 
@@ -48,12 +50,12 @@ class CommandSpec extends FunSpec with Matchers {
 
       res(0) match {
         case MoveTo(ds) => ds shouldBe Array((2,2))
-        case _ => fail
+        case _ => fail()
       }
 
       res(1) match {
         case LineTo(ds) => ds shouldBe Array((3,2),(-3,2))
-        case _ => fail
+        case _ => fail()
       }
 
       res(2) shouldBe ClosePath

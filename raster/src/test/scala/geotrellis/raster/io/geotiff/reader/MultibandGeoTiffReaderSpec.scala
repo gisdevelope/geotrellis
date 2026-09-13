@@ -18,13 +18,11 @@ package geotrellis.raster.io.geotiff.reader
 
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
+
 import geotrellis.raster.testkit._
+import org.scalatest.funspec.AnyFunSpec
 
-import org.scalatest._
-
-class MultibandGeoTiffReaderSpec extends FunSpec
-    with RasterMatchers
-    with GeoTiffTestUtils {
+class MultibandGeoTiffReaderSpec extends AnyFunSpec with RasterMatchers with GeoTiffTestUtils {
 
   describe("Reading geotiffs with INTERLEAVE=PIXEL") {
     it("Uncompressed, Stripped") {
@@ -105,6 +103,53 @@ class MultibandGeoTiffReaderSpec extends FunSpec
         ovrTile.bands.map(_.isNoDataTile).reduce(_ && _) should be (false)
 
         ovrTile.cols -> ovrTile.rows should be (ovrSize)
+      }
+    }
+
+    it("should pick up the tiff overview correct (AutoHigherResolution test)") {
+      def cellSizesSequence(cellSize: CellSize): List[CellSize] = {
+        val CellSize(w, h) = cellSize
+
+        val seq = for {
+          wp <- Range.BigDecimal(w / 2 + w / 4, w - w / 100, 100)
+          hp <- Range.BigDecimal(h / 2 + h / 4, h - h / 100, 100)
+        } yield CellSize(wp.toDouble, hp.toDouble)
+
+        seq.toList
+      }
+
+      val tiff = MultibandGeoTiff(geoTiffPath("overviews/multiband.tif"))
+
+      val overviews = tiff :: tiff.overviews
+
+      // cell sizes of overviews, starting with the base ifd
+      val cellSizes = ({
+        // an extra check for the base level overview
+        val CellSize(w, h) = overviews.head.cellSize
+        CellSize(w / 2, h / 2) -> -1
+      } :: overviews.map(_.cellSize).zipWithIndex) :+ {
+        // an extra check for the last overview
+        val CellSize(w, h) = overviews.last.cellSize
+        CellSize(w * 2, h * 2) -> overviews.length
+      }
+
+      // check all overviews
+      cellSizes.foreach { case (cz, i) =>
+        cellSizesSequence(cz).foreach { scz =>
+          if(i == -1) {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(0)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          } else if(i == 0) {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(i)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          } else {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(i - 1)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          }
+        }
       }
     }
 

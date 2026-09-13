@@ -16,8 +16,6 @@
 
 package geotrellis.raster
 
-import geotrellis.vector._
-
 import spire.syntax.cfor._
 
 
@@ -25,8 +23,16 @@ import spire.syntax.cfor._
   * [[MutableArrayTile]] is an [[ArrayTile]] whose cells can be
   * written to (mutated).
   */
-trait MutableArrayTile extends ArrayTile {
+abstract class MutableArrayTile extends ArrayTile {
   def mutable = this
+
+  /**
+   * cols and rows are explicitly defined to help with the Grid[N].{cols | rows} specialized functions dispatch.
+   * See https://github.com/locationtech/geotrellis/issues/3427
+   */
+  def cols: Int
+
+  def rows: Int
 
   /**
     * Update the datum at the specified index.
@@ -52,7 +58,7 @@ trait MutableArrayTile extends ArrayTile {
     * @param  row    The row
     * @param  value  The value
     */
-  def set(col:Int, row:Int, value:Int) {
+  def set(col:Int, row:Int, value:Int): Unit = {
     update(row * cols + col, value)
   }
 
@@ -64,7 +70,7 @@ trait MutableArrayTile extends ArrayTile {
     * @param  row    The row
     * @param  value  The value
     */
-  def setDouble(col:Int, row:Int, value:Double) {
+  def setDouble(col:Int, row:Int, value:Double): Unit = {
     updateDouble(row * cols + col, value)
   }
 

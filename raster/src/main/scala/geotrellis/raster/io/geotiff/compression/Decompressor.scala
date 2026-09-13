@@ -34,18 +34,18 @@ trait Decompressor extends Serializable {
     */
   def flipEndian(bytesPerFlip: Int): Decompressor =
     new Decompressor {
-      def code = Decompressor.this.code
-      override def predictorCode = Decompressor.this.predictorCode
+      def code: Int = Decompressor.this.code
+      override def predictorCode: Int = Decompressor.this.predictorCode
 
       override
-      def byteOrder = ByteOrder.LITTLE_ENDIAN // Since we have to flip, image data is in Little Endian
+      def byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN // Since we have to flip, image data is in Little Endian
 
       def decompress(bytes: Array[Byte], segmentIndex: Int): Array[Byte] =
         flip(Decompressor.this.decompress(bytes, segmentIndex))
 
       def flip(bytes: Array[Byte]): Array[Byte] = {
         val arr = bytes.clone
-        val size = arr.size
+        val size = arr.length
 
         var i = 0
         while (i < size) {
@@ -62,14 +62,14 @@ trait Decompressor extends Serializable {
       }
     }
 
-  def withPredictor(predictor: Predictor): Decompressor =
+  def withPredictorDecoding(predictor: Predictor): Decompressor =
     new Decompressor {
-      def code = Decompressor.this.code
-      override def predictorCode = predictor.code
-      override def byteOrder = Decompressor.this.byteOrder
+      def code: Int = Decompressor.this.code
+      override def predictorCode: Int = predictor.code
+      override def byteOrder: ByteOrder = Decompressor.this.byteOrder
 
       def decompress(bytes: Array[Byte], segmentIndex: Int): Array[Byte] =
-        predictor(Decompressor.this.decompress(bytes, segmentIndex), segmentIndex)
+        predictor.decode(Decompressor.this.decompress(bytes, segmentIndex), segmentIndex)
     }
 }
 
@@ -78,7 +78,7 @@ object Decompressor {
     import geotrellis.raster.io.geotiff.tags.codes.CompressionType._
 
     def checkEndian(d: Decompressor): Decompressor = {
-      if(byteOrder != ByteOrder.BIG_ENDIAN && tiffTags.bitsPerPixel > 8) {
+      if(byteOrder != ByteOrder.BIG_ENDIAN && tiffTags.bitsPerPixel() > 8) {
         d.flipEndian(tiffTags.bytesPerPixel / tiffTags.bandCount)
       } else {
         d
@@ -88,9 +88,9 @@ object Decompressor {
     def checkPredictor(d: Decompressor): Decompressor = {
       val predictor = Predictor(tiffTags)
       if(predictor.checkEndian)
-        checkEndian(d).withPredictor(predictor)
+        checkEndian(d).withPredictorDecoding(predictor)
       else
-        d.withPredictor(predictor)
+        d.withPredictorDecoding(predictor)
     }
 
     val segmentCount = tiffTags.segmentCount
@@ -108,18 +108,19 @@ object Decompressor {
 
     tiffTags.compression match {
       case Uncompressed =>
-        checkEndian(NoCompression)
+        checkEndian(NoCompressor)
       case LZWCoded =>
         checkPredictor(LZWDecompressor(segmentSizes))
       case ZLibCoded | PkZipCoded =>
         checkPredictor(DeflateCompression.createDecompressor(segmentSizes))
       case PackBitsCoded =>
         checkEndian(PackBitsDecompressor(segmentSizes))
+      case JpegCoded =>
+        checkEndian(JpegDecompressor(tiffTags))
+      case ZStdCoded =>
+        checkPredictor(ZStdCompression.createDecompressor)
 
       // Unsupported compression types
-      case JpegCoded =>
-        val msg = "compression type JPEG is not supported by this reader."
-        throw new GeoTiffReaderLimitationException(msg)
       case HuffmanCoded =>
         val msg = "compression type CCITTRLE is not supported by this reader."
         throw new GeoTiffReaderLimitationException(msg)

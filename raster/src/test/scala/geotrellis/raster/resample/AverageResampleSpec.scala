@@ -19,9 +19,10 @@ package geotrellis.raster.resample
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class AverageResampleSpec extends FunSpec with Matchers {
+class AverageResampleSpec extends AnyFunSpec with Matchers {
 
   describe("it should correctly resample to the average of a region") {
 
@@ -33,7 +34,7 @@ class AverageResampleSpec extends FunSpec with Matchers {
     }
 
     it("should, for a double tile, compute an average of .1 to 10 as roughly 5") {
-      val tile = DoubleArrayTile(.1 to 10.0 by .1 toArray, 10, 10)
+      val tile = DoubleArrayTile(Range.BigDecimal.inclusive(0.1, 10.0, 0.1).map(_.toDouble).toArray, 10, 10)
       val extent = Extent(0, 0, 10, 10)
       val cellsize = CellSize(extent, 1, 1)
       tile.resample(extent, 1, 1, Average).getDouble(0, 0) should be (5.0 +- 0.1)

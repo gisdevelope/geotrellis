@@ -16,17 +16,17 @@
 
 package geotrellis.raster
 
-import spire.syntax.cfor._
-import geotrellis.util._
-
-import java.util.Locale
-import scala.collection.mutable.ArrayBuffer
-import scala.math.BigDecimal
-
 /**
   * Base trait for a Tile.
   */
-trait Tile extends CellGrid with IterableTile with MappableTile[Tile] with LazyLogging {
+abstract class Tile extends CellGrid[Int] with IterableTile with MappableTile[Tile] {
+  /**
+   * cols and rows are explicitly defined to help with the Grid[N].{cols | rows} specialized functions dispatch.
+   * See https://github.com/locationtech/geotrellis/issues/3427
+   */
+  def cols: Int
+
+  def rows: Int
 
   /**
     * Execute a function at each pixel of a [[Tile]].  Two functions
@@ -101,7 +101,10 @@ trait Tile extends CellGrid with IterableTile with MappableTile[Tile] with LazyL
     if (cellType.union(r2.cellType).isFloatingPoint) combineDouble(r2)(g) else combine(r2)(f)
 
   /**
-    * Create a mutable copy of this tile
+    * Returns a mutable instance of this tile.
+    *
+    * @note When the underlying class is an instance of [[MutableArrayTile]] it will return itself without performing a copy.
+    *       This is used internally as a performance optimization when the ownership of the tile is controlled.
     */
   def mutable: MutableArrayTile
 

@@ -17,14 +17,12 @@
 package geotrellis.spark.mapalgebra.local
 
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
-import geotrellis.spark.TileLayerRDD
 import geotrellis.spark.testkit.testfiles._
 import geotrellis.spark.testkit._
 
-import org.scalatest.FunSpec
+import org.scalatest.funspec.AnyFunSpec
 
-class LocalSeqSpec extends FunSpec with TestEnvironment with TestFiles {
+class LocalSeqSpec extends AnyFunSpec with TestEnvironment with TestFiles {
 
   describe("Local Seq Operations") {
     val ones = AllOnesTestFile
@@ -34,7 +32,7 @@ class LocalSeqSpec extends FunSpec with TestEnvironment with TestFiles {
     val dec = DecreasingTestFile
 
     val (cols: Int, rows: Int) = {
-      val tile = ones.stitch
+      val tile = ones.stitch()
       (tile.cols, tile.rows)
     }
 

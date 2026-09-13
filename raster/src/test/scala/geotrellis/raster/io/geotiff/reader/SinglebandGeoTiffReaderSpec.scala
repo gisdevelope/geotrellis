@@ -19,15 +19,12 @@ package geotrellis.raster.io.geotiff.reader
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff._
 import geotrellis.raster.testkit._
-import geotrellis.util.Filesystem
 
 import spire.syntax.cfor._
-import org.scalatest._
 
-class SinglebandGeoTiffReaderSpec extends FunSpec
-    with RasterMatchers
-    with GeoTiffTestUtils {
+import org.scalatest.funspec.AnyFunSpec
 
+class SinglebandGeoTiffReaderSpec extends AnyFunSpec with RasterMatchers with GeoTiffTestUtils {
   def geoTiff(storage: String, cellType: String): SinglebandGeoTiff =
     SinglebandGeoTiff(geoTiffPath(s"uncompressed/$storage/${cellType}.tif"))
 
@@ -70,16 +67,16 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       val expected =
         SinglebandGeoTiff(geoTiffPath("1band/aspect_byte_uncompressed_tiled.tif"))
           .tile
-          .toArrayTile
+          .toArrayTile()
           .map { b => if(b == 0) 0 else 1 }
           .convert(BitCellType)
-          .toArrayTile
+          .toArrayTile()
 
       assertEqual(actual, expected)
     }
 
     it("must read Striped Bit aspect, convert to byte, and match gdal converted byte file") {
-      val actual = GeoTiffReader.readSingleband(geoTiffPath("1band/aspect_bit_uncompressed_striped.tif")).tile.toArrayTile.convert(UByteCellType)
+      val actual = GeoTiffReader.readSingleband(geoTiffPath("1band/aspect_bit_uncompressed_striped.tif")).tile.toArrayTile().convert(UByteCellType)
       val expected = GeoTiffReader.readSingleband(geoTiffPath("1band/aspect_bit-to-byte_uncompressed_striped.tif")).tile
 
       assertEqual(actual, expected)
@@ -134,6 +131,75 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
         ovrTile.isNoDataTile should be (false)
 
         ovrTile.cols -> ovrTile.rows should be (ovrSize)
+      }
+    }
+
+    it("should read tiff with masks and mask overviews correct (skip everything that is not a reduced image)") {
+      // sizes of overviews, starting with the base ifd
+      val sizes = List(1024 -> 1024, 512 -> 512)
+
+      val tiff = SinglebandGeoTiff(geoTiffPath("overviews/per-dataset-mask.tif"))
+      val tile = tiff.tile
+
+      tiff.getOverviewsCount should be (1)
+      tile.isNoDataTile should be (false)
+
+      tile.cols -> tile.rows should be (sizes(0))
+
+      tiff.overviews.zip(sizes.tail).foreach { case (ovrTiff, ovrSize) =>
+        val ovrTile = ovrTiff.tile
+
+        ovrTiff.getOverviewsCount should be (0)
+        ovrTile.isNoDataTile should be (false)
+
+        ovrTile.cols -> ovrTile.rows should be (ovrSize)
+      }
+    }
+
+    it("should pick up the tiff overview correct (AutoHigherResolution test)") {
+      def cellSizesSequence(cellSize: CellSize): List[CellSize] = {
+        val CellSize(w, h) = cellSize
+
+        val seq = for {
+          wp <- Range.BigDecimal(w / 2 + w / 4, w - w / 100, 100)
+          hp <- Range.BigDecimal(h / 2 + h / 4, h - h / 100, 100)
+        } yield CellSize(wp.toDouble, hp.toDouble)
+
+        seq.toList
+      }
+
+      val tiff = SinglebandGeoTiff(geoTiffPath("overviews/singleband.tif"))
+
+      val overviews = tiff :: tiff.overviews
+
+      // cell sizes of overviews, starting with the base ifd
+      val cellSizes = ({
+        // an extra check for the base level overview
+        val CellSize(w, h) = overviews.head.cellSize
+        CellSize(w / 2, h / 2) -> -1
+      } :: overviews.map(_.cellSize).zipWithIndex) :+ {
+        // an extra check for the last overview
+        val CellSize(w, h) = overviews.last.cellSize
+        CellSize(w * 2, h * 2) -> overviews.length
+      }
+
+      // check all overviews
+      cellSizes.foreach { case (cz, i) =>
+        cellSizesSequence(cz).foreach { scz =>
+          if(i == -1) {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(0)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          } else if(i == 0) {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(i)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          } else {
+            val closestOvr = tiff.getClosestOverview(scz, AutoHigherResolution)
+            val ovr = overviews(i - 1)
+            closestOvr.raster.cellSize should be(ovr.raster.cellSize)
+          }
+        }
       }
     }
 
@@ -217,7 +283,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -272,7 +338,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
           println(s"     Testing $c $s:")
           withClue(s"Failed for Compression $c, storage $s") {
-            val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+            val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
             assertEqual(tile, expected)
           }
@@ -298,7 +364,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -324,7 +390,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -350,7 +416,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -376,7 +442,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -400,7 +466,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
       ) {
         println(s"     Testing $c $s:")
         withClue(s"Failed for Compression $c, storage $s") {
-          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile
+          val tile = SinglebandGeoTiff(geoTiffPath(s"$c/$s/$t.tif")).tile.toArrayTile()
 
           assertEqual(tile, expected)
         }
@@ -419,7 +485,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
         withClue(s"Failed for Storage $s, type $t") {
           val gtiff = geoTiff(s, t)
           val tile = gtiff.tile
-          assertEqual(tile, tile.toArrayTile)
+          assertEqual(tile, tile.toArrayTile())
         }
       }
     }
@@ -434,7 +500,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
         withClue(s"Failed for Storage $s, type $t") {
           val tile = geoTiff(s, t).tile
           val m1 = tile.map { z => z + 1 }
-          val m2 = tile.toArrayTile.map { z => z + 1 }
+          val m2 = tile.toArrayTile().map { z => z + 1 }
           assertEqual(m1, m2)
         }
       }
@@ -450,7 +516,7 @@ class SinglebandGeoTiffReaderSpec extends FunSpec
         withClue(s"Failed for Storage $s, type $t") {
           val tile = geoTiff(s, t).tile
           val m1 = tile.mapDouble { z => z + 1.0 }
-          val m2 = tile.toArrayTile.mapDouble { z => z + 1.0 }
+          val m2 = tile.toArrayTile().mapDouble { z => z + 1.0 }
           assertEqual(m1, m2)
         }
       }

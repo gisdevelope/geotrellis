@@ -18,14 +18,12 @@ package geotrellis.raster.mapalgebra.local
 
 import geotrellis.raster._
 
-import org.scalatest._
-
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 import geotrellis.raster.testkit._
 
-class TanhSpec extends FunSpec
-                  with Matchers
-                  with RasterMatchers
-                  with TileBuilders {
+class TanhSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("Tanh") {
     it("finds the tanh of a double raster") {
       val rasterData = Array (
@@ -39,7 +37,7 @@ class TanhSpec extends FunSpec
       ).map(_*math.Pi)
       val expected = rasterData.map(math.tanh(_))
       val r = createTile(rasterData, 6, 6)
-      val result = r.localTanh
+      val result = r.localTanh()
       for (y <- 0 until 6) {
         for (x <- 0 until 6) {
           val theTanh = result.getDouble(x, y)
@@ -66,7 +64,7 @@ class TanhSpec extends FunSpec
                                .toList
                                .init
       val r = createTile(rasterData, 4, 4)
-      val result = r.localTanh
+      val result = r.localTanh()
       for (y <- 0 until 4) {
         for (x <- 0 until 4) {
           val isLastValue = (x == 3 && y == 3)

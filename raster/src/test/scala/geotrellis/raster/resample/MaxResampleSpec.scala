@@ -19,9 +19,10 @@ package geotrellis.raster.resample
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class MaxResampleSpec extends FunSpec with Matchers {
+class MaxResampleSpec extends AnyFunSpec with Matchers {
 
   describe("it should resample to nodata when only nodata in tile") {
 
@@ -35,12 +36,13 @@ class MaxResampleSpec extends FunSpec with Matchers {
     }
 
     it("should for a nodata double tile compute nodata as max value") {
-      val tile = DoubleArrayTile(Array(NODATA, NODATA, NODATA,
-                                       NODATA, NODATA, NODATA,
-                                       NODATA, NODATA, NODATA), 3, 3)
+      val tile = DoubleArrayTile(Array(doubleNODATA, doubleNODATA, doubleNODATA,
+                                       doubleNODATA, doubleNODATA, doubleNODATA,
+                                       doubleNODATA, doubleNODATA, doubleNODATA), 3, 3)
       val extent = Extent(0, 0, 10, 10)
       val cellsize = CellSize(extent, 10, 10)
-      tile.resample(extent, 1, 1, Max).get(0, 0) should be (NODATA)
+      tile.resample(extent, 1, 1, Max).getDouble(0, 0).isNaN shouldBe true
+      tile.resample(extent, 1, 1, Max).get(0,0) should be (NODATA)
     }
 
     it("should for an integer tile compute the correct maximum value") {
@@ -63,6 +65,12 @@ class MaxResampleSpec extends FunSpec with Matchers {
       val extent = Extent(0, 0, 3, 3)
       val cellsize = CellSize(extent, 3, 3)
       tile.resample(extent, 1, 1, Max).getDouble(0, 0) should be (100.1)
+    }
+
+    it("should for an int tile compute the correct maximum value - ignoring the user defined nodata value") {
+      val tile = IntArrayTile(Array(2, 4, 256, 16), 2, 2, noDataValue = 256)
+      val extent = Extent(0, 0, 2, 2)
+      tile.resample(extent, 1, 1, method = Max).get(0, 0) should be (16)
     }
   }
 }

@@ -16,11 +16,9 @@
 
 package geotrellis.raster
 
-import geotrellis.raster.resample._
 import geotrellis.vector.Extent
 
 import spire.syntax.cfor._
-import scala.collection.mutable
 
 
 /**
@@ -53,8 +51,10 @@ object CroppedTile {
 /**
   * The [[CroppedTile]] type.
   */
-case class CroppedTile(sourceTile: Tile,
-                       override val gridBounds: GridBounds) extends Tile {
+case class CroppedTile(
+  sourceTile: Tile,
+  gridBounds: GridBounds[Int]
+) extends Tile {
 
   val cols = gridBounds.width
   val rows = gridBounds.height
@@ -122,14 +122,14 @@ case class CroppedTile(sourceTile: Tile,
     *
     * @return  An [[ArrayTile]]
     */
-  def toArrayTile: ArrayTile = mutable
+  def toArrayTile(): ArrayTile = mutable
 
   /**
     * Return the [[MutableArrayTile]] equivalent of this tile.
     *
     * @return  An MutableArrayTile
     */
-  def mutable(): MutableArrayTile =
+  def mutable: MutableArrayTile =
     mutable(cellType)
 
   /**
@@ -138,9 +138,6 @@ case class CroppedTile(sourceTile: Tile,
     * @return  An MutableArrayTile
     */
   def mutable(targetCellType: CellType): MutableArrayTile = {
-    if(targetCellType.isFloatingPoint != cellType.isFloatingPoint)
-      logger.warn(s"Conversion from $cellType to $targetCellType may lead to data loss.")
-
     val tile = ArrayTile.alloc(targetCellType, cols, rows)
 
     if(!cellType.isFloatingPoint) {
@@ -165,7 +162,7 @@ case class CroppedTile(sourceTile: Tile,
     *
     * @return  The copy as an Array[Int]
     */
-  def toArray: Array[Int] = {
+  def toArray(): Array[Int] = {
     val arr = Array.ofDim[Int](cols * rows)
 
     var i = 0
@@ -184,7 +181,7 @@ case class CroppedTile(sourceTile: Tile,
     *
     * @return  The copy as an Array[Int]
     */
-  def toArrayDouble: Array[Double] = {
+  def toArrayDouble(): Array[Double] = {
     val arr = Array.ofDim[Double](cols * rows)
 
     var i = 0
@@ -203,7 +200,7 @@ case class CroppedTile(sourceTile: Tile,
     *
     * @return  An array of bytes
     */
-  def toBytes(): Array[Byte] = toArrayTile.toBytes
+  def toBytes(): Array[Byte] = toArrayTile().toBytes()
 
   /**
     * Execute a function on each cell of the tile.  The function
@@ -226,8 +223,6 @@ case class CroppedTile(sourceTile: Tile,
     * @param  f  A function from Double to Unit
     */
   def foreachDouble(f: Double => Unit): Unit = {
-    val tile = ArrayTile.alloc(cellType, cols, rows)
-
     cfor(0)(_ < rows, _ + 1) { row =>
       cfor(0)(_ < cols, _ + 1) { col =>
         f(getDouble(col, row))
@@ -342,9 +337,9 @@ case class CroppedTile(sourceTile: Tile,
     * @return         The result, an Tile
     */
   def combine(other: Tile)(f: (Int, Int) => Int): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
-    val tile = ArrayTile.alloc(cellType, cols, rows)
+    val tile = ArrayTile.alloc(cellType.union(other.cellType), cols, rows)
     cfor(0)(_ < rows, _ + 1) { row =>
       cfor(0)(_ < cols, _ + 1) { col =>
         tile.set(col, row, f(get(col, row), other.get(col, row)))
@@ -365,7 +360,7 @@ case class CroppedTile(sourceTile: Tile,
     * @return         The result, an Tile
     */
   def combineDouble(other: Tile)(f: (Double, Double) => Double): Tile = {
-    (this, other).assertEqualDimensions
+    (this, other).assertEqualDimensions()
 
     val tile = ArrayTile.alloc(cellType, cols, rows)
     cfor(0)(_ < rows, _ + 1) { row =>

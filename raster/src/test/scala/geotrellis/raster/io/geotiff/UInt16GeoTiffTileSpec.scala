@@ -17,21 +17,36 @@
 package geotrellis.raster.io.geotiff
 
 import geotrellis.raster.testkit.{RasterMatchers, TileBuilders}
-import geotrellis.raster.IntCellType
-import org.scalatest.{BeforeAndAfterAll, Matchers, FunSpec}
+import geotrellis.raster.{ByteCellType, IntCellType, UByteCellType}
 
-class UInt16GeoTiffTileSpec extends FunSpec
-with Matchers
-with BeforeAndAfterAll
-with RasterMatchers
-with GeoTiffTestUtils
-with TileBuilders {
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class UInt16GeoTiffTileSpec extends AnyFunSpec with Matchers with BeforeAndAfterAll with RasterMatchers with GeoTiffTestUtils with TileBuilders {
+
   describe("UInt16GeoTiffTile") {
    it("should read landsat 8 data correctly") {
-     val actualImage = SinglebandGeoTiff(geoTiffPath(s"ls8_uint16.tif")).tile.toArrayTile.convert(IntCellType)
-     val expectedImage = SinglebandGeoTiff(geoTiffPath(s"ls8_int32.tif")).tile.toArrayTile
+     val actualImage = SinglebandGeoTiff(geoTiffPath(s"ls8_uint16.tif")).tile.toArrayTile().convert(IntCellType)
+     val expectedImage = SinglebandGeoTiff(geoTiffPath(s"ls8_int32.tif")).tile.toArrayTile()
 
      assertEqual(actualImage, expectedImage)
    }
+
+    it("should convert landsat8 into UByte correctly") {
+      val tiff = SinglebandGeoTiff(geoTiffPath(s"ls8_uint16.tif")).tile
+      val expectedImage = tiff.toArrayTile().rescale(0, 255).convert(UByteCellType)
+      val actualImage = tiff.rescale(0, 255).convert(UByteCellType)
+
+      assertEqual(actualImage, expectedImage)
+    }
+
+    it("should convert landsat8 into Byte correctly") {
+      val tiff = SinglebandGeoTiff(geoTiffPath(s"ls8_uint16.tif")).tile
+      val expectedImage = tiff.toArrayTile().rescale(Byte.MinValue, Byte.MaxValue).convert(ByteCellType)
+      val actualImage = tiff.rescale(Byte.MinValue, Byte.MaxValue).convert(ByteCellType)
+
+      assertEqual(actualImage, expectedImage)
+    }
   }
 }

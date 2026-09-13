@@ -18,12 +18,11 @@ package geotrellis.raster.io.arg
 
 import geotrellis.raster._
 import geotrellis.vector.Extent
+
 import geotrellis.raster.testkit._
+import org.scalatest.funsuite.AnyFunSuite
 
-import org.scalatest._
-
-class ArgTest extends FunSuite
-                 with RasterMatchers {
+class ArgTest extends AnyFunSuite with RasterMatchers {
   val array =
     Array(NODATA, -1, 2, -3,
       4, -5, 6, -7,
@@ -53,26 +52,26 @@ class ArgTest extends FunSuite
   }
 
   test("check int8") {
-    assert(loadRaster("/tmp/foo-int8.json").toArray === array)
+    assert(loadRaster("/tmp/foo-int8.json").tile.toArray() === array)
   }
 
   test("check int16") {
-    assert(loadRaster("/tmp/foo-int16.json").toArray === array)
+    assert(loadRaster("/tmp/foo-int16.json").tile.toArray() === array)
   }
 
   test("check int32") {
-    assert(loadRaster("/tmp/foo-int32.json").toArray === array)
+    assert(loadRaster("/tmp/foo-int32.json").tile.toArray() === array)
   }
 
   test("check float32") {
-    val d = loadRaster("/tmp/foo-float32.json").toArrayTile
+    val d = loadRaster("/tmp/foo-float32.json").tile.toArrayTile()
     assert(isNoData(d.applyDouble(0)))
     assert(d.applyDouble(1) === -1.0)
     assert(d.applyDouble(2) === 2.0)
   }
 
   test("check float64") {
-    val d = loadRaster("/tmp/foo-float64.json").toArrayTile
+    val d = loadRaster("/tmp/foo-float64.json").tile.toArrayTile()
     assert(isNoData(d.applyDouble(0)))
     assert(d.applyDouble(1) === -1.0)
     assert(d.applyDouble(2) === 2.0)
@@ -101,7 +100,7 @@ class ArgTest extends FunSuite
     ArgWriter(ByteConstantNoDataCellType).write("/tmp/fooc-int8.arg", tile, extent, "fooc-int8")
     val r2 = loadRaster("/tmp/fooc-int8.json")
 
-    assert(r2.toArrayTile === tile.toArrayTile)
+    assert(r2.tile.toArrayTile() === tile.toArrayTile())
   }
 
   test("make sure it contains 100 cells") {
@@ -111,7 +110,7 @@ class ArgTest extends FunSuite
 
   test("make sure it's an array of zeros") {
     val d = FloatArrayTile.ofDim(10, 10)
-    assert(d.toArrayDouble === Array.fill(100)(0.0))
+    assert(d.toArrayDouble() === Array.fill(100)(0.0))
   }
 
   test("update raster.data(3)") {
@@ -124,7 +123,7 @@ class ArgTest extends FunSuite
   test("update all raster values") {
     val d = FloatArrayTile.ofDim(10, 10)
     for (i <- 0 until 100) d.updateDouble(i, i.toDouble)
-    val data2 = d.mapDouble(_ % 3.0).toArrayDouble
+    val data2 = d.mapDouble(_ % 3.0).toArrayDouble()
     assert(data2(0) === 0.0)
     assert(data2(1) === 1.0)
     assert(data2(2) === 2.0)

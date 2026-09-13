@@ -1,33 +1,46 @@
+/*
+ * Copyright 2019 Azavea
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package geotrellis.spark.distance
 
-import com.vividsolutions.jts.geom.Coordinate
-import org.apache.spark.rdd.RDD
-
 import geotrellis.proj4._
+import geotrellis.layer._
 import geotrellis.raster._
+import geotrellis.raster.buffer.Direction
+import geotrellis.raster.buffer.Direction._
 import geotrellis.raster.distance.{EuclideanDistanceTile => RasterEuclideanDistance}
-import geotrellis.raster.render._
 import geotrellis.raster.testkit._
 import geotrellis.spark._
-import geotrellis.spark.buffer.Direction
-import geotrellis.spark.buffer.Direction._
 import geotrellis.spark.testkit._
-import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vector.triangulation._
 import geotrellis.vector.io.wkt.WKT
 
-import scala.util.Random
-import scala.math.{Pi, sin, cos, atan, max, pow}
-
-import org.scalatest._
+import org.locationtech.jts.geom.Coordinate
+import org.apache.spark.rdd.RDD
 import spire.syntax.cfor._
 
-class EuclideanDistanceSpec extends FunSpec 
-                            with TestEnvironment
-                            with Matchers 
-                            with RasterMatchers {
+import scala.util.Random
+import scala.math.{Pi, atan, cos, max, pow, sin}
 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+
+class EuclideanDistanceSpec extends AnyFunSpec with TestEnvironment with Matchers with RasterMatchers {
   //def heightField(x: Double, y: Double): Double = math.pow(x*x + y*y - 1, 3) - x*x * y*y*y + 0.5
 
   //def heightField(x: Double, y: Double): Double = math.pow(math.sin(math.Pi * x) * math.cos(math.Pi * y), 2) - 0.1
@@ -40,8 +53,8 @@ class EuclideanDistanceSpec extends FunSpec
     val h = ex.height
 
     def proposal() = {
-      val u = Random.nextDouble
-      val v = Random.nextDouble
+      val u = Random.nextDouble()
+      val v = Random.nextDouble()
       val x = xmin + u * w
       val y = ymin + v * h
 
@@ -50,13 +63,13 @@ class EuclideanDistanceSpec extends FunSpec
 
     val sample = Array.ofDim[Coordinate](n)
     var i = 0
-    var site = proposal
-    while (site.z < 0) site = proposal
+    var site = proposal()
+    while (site.getZ < 0) site = proposal()
 
     while (i < n) {
-      val next = proposal
-      if (next.z > site.z || Random.nextDouble < next.z / site.z) {
-        // if (next.z > site.z)
+      val next = proposal()
+      if (next.getZ > site.getZ || Random.nextDouble() < next.getZ / site.getZ) {
+        // if (next.getZ > site.getZ)
         //   print("↑")
         // else
         //   print("↓")
@@ -64,13 +77,13 @@ class EuclideanDistanceSpec extends FunSpec
         site = next
         i += 1
       } else {
-        // if (next.z < 0)
+        // if (next.getZ < 0)
         //   print("☠")
         // else
         //   print("-")
       }
     }
-    println
+    println()
 
     sample
   }
@@ -80,10 +93,10 @@ class EuclideanDistanceSpec extends FunSpec
     it("should work for a real data set") {
       println("  Reading points")
       val wkt = getClass.getResourceAsStream("/wkt/excerpt.wkt")
-      val wktString = scala.io.Source.fromInputStream(wkt).getLines.mkString
+      val wktString = scala.io.Source.fromInputStream(wkt).getLines().mkString
       val multiPoint = WKT.read(wktString).asInstanceOf[MultiPoint]
-      val points: Array[Coordinate] = multiPoint.points.map(_.jtsGeom.getCoordinate)
-      val fullExtent @ Extent(xmin, ymin, xmax, ymax) = multiPoint.envelope
+      val points: Array[Coordinate] = multiPoint.points.map(_.getCoordinate)
+      val fullExtent @ Extent(xmin, ymin, xmax, ymax) = multiPoint.extent
 
       def keyToExtent(key: SpatialKey) = {
         val SpatialKey(col, row) = key
@@ -93,7 +106,7 @@ class EuclideanDistanceSpec extends FunSpec
         Extent(xmin + w * col, ymax - h * (row + 1), xmin + w * (col + 1), ymax - h * row)
       }
 
-      def keyToDirection(key: SpatialKey): Direction = key match {
+      def keyToDirection(key: SpatialKey): Direction = (key: @unchecked) match {
         case SpatialKey(0, 0) => TopLeft
         case SpatialKey(1, 0) => Top
         case SpatialKey(2, 0) => TopRight
@@ -108,19 +121,19 @@ class EuclideanDistanceSpec extends FunSpec
       println("  Building Delaunay triangulations")
       val triangulations = (for (x <- 0 to 2 ; y <- 0 to 2) yield SpatialKey(x, y)).toSeq.map { key =>
         val ex = keyToExtent(key)
-        val pts = multiPoint.intersection(ex).asMultiPoint.get.points.map(_.jtsGeom.getCoordinate)
+        val pts = (multiPoint & ex).asMultiPoint.get.points.map(_.getCoordinate)
         val dt = DelaunayTriangulation(pts)
         (keyToDirection(key), (dt, ex))
       }.toMap
       println("  Extracting BoundaryDelaunay objects")
-      val bounds = triangulations.mapValues{ case (dt, ex) => (BoundaryDelaunay(dt, ex), ex) }
+      val bounds = triangulations.map { case (k, (dt, ex)) => k -> (BoundaryDelaunay(dt, ex), ex) }
       val (center, centerEx) = triangulations(Center)
 
       println("  Forming baseline EuclideanDistanceTile")
       val rasterExtent = RasterExtent(centerEx, 512, 512)
       val rasterTile = RasterEuclideanDistance(points, rasterExtent)
       // val maxDistance = rasterTile.findMinMaxDouble._2 + 1e-8
-      // val cm = ColorMap((0.0 to maxDistance by (maxDistance/512)).toArray, ColorRamps.BlueToRed)
+      // val cm = ColorMap((0.0 to maxDistance by (maxDistance/512)).toArray(), ColorRamps.BlueToRed)
       // rasterTile.renderPng(cm).write("base_distance.png")
 
       println("  Forming stitched EuclideanDistance tile")
@@ -136,7 +149,7 @@ class EuclideanDistanceSpec extends FunSpec
       val domain = Extent(0, -1.15, 1, -0.05)
       val sample = generatePoints(domain, 2500)
 
-      // val wktString = scala.io.Source.fromFile("euclidean_distance_sample.wkt").getLines.mkString
+      // val wktString = scala.io.Source.fromFile("euclidean_distance_sample.wkt").getLines().mkString
       // val sample = geotrellis.vector.io.wkt.WKT.read(wktString).asInstanceOf[MultiPoint].points.map(_.jtsGeom.getCoordinate)
 
       val rasterExtent = RasterExtent(domain, 1024, 1024)
@@ -179,16 +192,16 @@ class EuclideanDistanceSpec extends FunSpec
       val newsample = broken.map(_._2.toSeq).reduce(_ ++ _)
       val rasterTile = newsample.euclideanDistanceTile(rasterExtent)
 
-      val rdd: RDD[(SpatialKey, Array[Coordinate])] = 
+      val rdd: RDD[(SpatialKey, Array[Coordinate])] =
         sc.parallelize(broken.toSeq)
           .map{ case (key, iter) => (key, iter.toArray) }
 
       rdd.foreach{ case (key, arr) => println(s"$key has ${arr.length} coordinates") }
 
       val tileRDD: RDD[(SpatialKey, Tile)] = rdd.euclideanDistance(layoutdef)
-      val stitched = tileRDD.stitch
+      val stitched = tileRDD.stitch()
 
-      // For to export point data 
+      // For to export point data
       // val mp = MultiPoint(newsample.map{ Point.jtsCoord2Point(_)})
       // val wktString = geotrellis.vector.io.wkt.WKT.write(mp)
       // new java.io.PrintWriter("euclidean_distance_sample.wkt") { write(wktString); close }
@@ -243,7 +256,7 @@ class EuclideanDistanceSpec extends FunSpec
       cfor(0)(_ < stitch.pointSet.length, _ + 1) { i =>
         println(s"${i}: ${stitch.pointSet.getCoordinate(i)}")
       }
-      println(s"  Resulting triangles: ${stitch.triangles}")
+      println(s"  Resulting triangles: ${stitch.triangles()}")
 
       println(s"Rasterizing full point set")
       val baselineEDT = RasterEuclideanDistance(points, rasterExtent)
@@ -294,7 +307,7 @@ class EuclideanDistanceSpec extends FunSpec
       cfor(0)(_ < stitch.pointSet.length, _ + 1) { i =>
         println(s"${i}: ${stitch.pointSet.getCoordinate(i)}")
       }
-      println(s"  Resulting triangles: ${stitch.triangles}")
+      println(s"  Resulting triangles: ${stitch.triangles()}")
 
       println(s"Rasterizing full point set")
       val baselineEDT = RasterEuclideanDistance(points, rasterExtent)
@@ -306,13 +319,13 @@ class EuclideanDistanceSpec extends FunSpec
     }
 
     it("SparseEuclideanDistance should produce correct results") {
-      val geomWKT = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/wkt/schools.wkt")).getLines.mkString
+      val geomWKT = scala.io.Source.fromInputStream(getClass.getResourceAsStream("/wkt/schools.wkt")).getLines().mkString
       val geom = geotrellis.vector.io.wkt.WKT.read(geomWKT).asInstanceOf[MultiPoint]
-      val coords = geom.points.map(_.jtsGeom.getCoordinate)
+      val coords = geom.points.map(_.getCoordinate)
 
       val LayoutLevel(_, ld) = ZoomedLayoutScheme(WebMercator).levelForZoom(12)
       val maptrans = ld.mapTransform
-      val gb @ GridBounds(cmin, rmin, cmax, rmax) = maptrans(geom.envelope)
+      val gb @ GridBounds(cmin, rmin, cmax, rmax) = maptrans(geom.extent)
       val extent = maptrans(gb)
       val rasterExtent = RasterExtent(extent, 256 * (cmax - cmin + 1), 256 * (rmax - rmin + 1))
 
@@ -324,7 +337,7 @@ class EuclideanDistanceSpec extends FunSpec
       println(s"    Baseline has size (${baseline.cols}, ${baseline.rows})")
 
       println("Computing sparse Euclidean distance (spark)")
-      val stitched = SparseEuclideanDistance(coords, extent, ld, 256, 256).stitch
+      val stitched = SparseEuclideanDistance(coords, extent, ld, 256, 256).stitch()
       println(s"    Stitched has size (${stitched.cols}, ${stitched.rows})")
 
       assertEqual(baseline, stitched)

@@ -19,9 +19,10 @@ package geotrellis.raster.resample
 import geotrellis.raster._
 import geotrellis.vector.Extent
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class MedianResampleSpec extends FunSpec with Matchers {
+class MedianResampleSpec extends AnyFunSpec with Matchers {
 
   describe("it should resample to nodata when only nodata in tile") {
 
@@ -34,7 +35,7 @@ class MedianResampleSpec extends FunSpec with Matchers {
     }
 
     it("should for a double tile compute nodata as most common value") {
-      val tile = DoubleArrayTile(0.1 to 10 by 0.1 toArray, 10, 10)
+      val tile = DoubleArrayTile(Range.BigDecimal.inclusive(0.1, 10, 0.1).map(_.toDouble).toArray, 10, 10)
       val extent = Extent(0, 0, 10, 10)
       val cellsize = CellSize(extent, 10, 10)
       val resamp = new MedianResample(tile, extent, cellsize)

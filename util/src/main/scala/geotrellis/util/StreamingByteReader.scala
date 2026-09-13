@@ -42,18 +42,18 @@ class StreamingByteReader(rangeReader: RangeReader, chunkSize: Int = 45876) exte
 
   private var chunkBytes: Array[Byte] = _
   private var chunkBuffer: ByteBuffer = _
-  private var chunkRange: NumericRange[Long] = 1l to 0l // empty
-  private var filePosition: Long = 0l
+  private var chunkRange: NumericRange[Long] = 1L to 0L // empty
+  private var filePosition: Long = 0L
   private var byteOrder: ByteOrder = ByteOrder.BIG_ENDIAN
 
-  def position: Long = filePosition
+  def position(): Long = filePosition
 
   def position(newPosition: Long): ByteReader = {
     filePosition = newPosition
     this
   }
 
-  def order: ByteOrder = byteOrder
+  def order(): ByteOrder = byteOrder
 
   def order(byteOrder: ByteOrder): Unit = {
     this.byteOrder = byteOrder
@@ -102,23 +102,27 @@ class StreamingByteReader(rangeReader: RangeReader, chunkSize: Int = 45876) exte
     }
   }
 
-  /** Ensure we can read given number of bytes from current filePosition */
-  private def ensureChunk(length: Int): Unit = {
+  /** Ensure we can read given number of bytes from current filePosition
+    * Returns the length of bytes which have been successfully ensured
+    */
+  private def ensureChunk(length: Int): Int = {
     val trimmed: Long = math.min(length.toLong, rangeReader.totalLength - filePosition)
     if (!chunkRange.contains(filePosition) || !chunkRange.contains(filePosition + trimmed - 1)) {
       val len: Long = math.min(math.max(length, chunkSize), rangeReader.totalLength - filePosition)
       readChunk(filePosition to (filePosition + len - 1))
     }
 
-    if (filePosition != chunkRange.start + chunkBuffer.position)
+    if (filePosition != chunkRange.start + chunkBuffer.position())
       chunkBuffer.position((filePosition - chunkRange.start).toInt)
+
+    trimmed.toInt
   }
 
   def getBytes(length: Int): Array[Byte] = {
-    ensureChunk(length)
-    val bytes = Array.ofDim[Byte](length)
+    val actualLength = ensureChunk(length)
+    val bytes = Array.ofDim[Byte](actualLength)
     chunkBuffer.get(bytes)
-    filePosition += length
+    filePosition += actualLength
     bytes
   }
 

@@ -157,10 +157,11 @@ class CoordinateSystemParser(val crs: CRS, val pixelSampleType: Option[PixelSamp
   // that this code is taken from. We need to be able to write out more projections.
   private lazy val projProps = proj4Map.get("proj") match {
     case Some("tmerc") => tmercProps
+    case Some("merc") => mercProps
     case Some("utm") => utmProps
     case Some("lcc") => lccProps
     case Some("longlat") | Some("latlong") => longLatProps
-    case Some("sinu") ⇒ sinuProps
+    case Some("sinu") => sinuProps
     case Some("aea") => aeaProps
     case Some(p) => throw new GeoTiffWriterLimitationException(
       s"This GeoTiff writer does not currently support the projection $proj4String without an EPSG code associated with the CRS. You'll need to use a CRS that has an EPSG code, or reproject before writing to GeoTIFF."
@@ -180,6 +181,27 @@ class CoordinateSystemParser(val crs: CRS, val pixelSampleType: Option[PixelSamp
     val doubles = List(
       (ProjNatOriginLatGeoKey, getDouble("lat_0")),
       (ProjNatOriginLongGeoKey, getDouble("lon_0")),
+      (ProjScaleAtNatOriginGeoKey, getK(1.0)),
+      (ProjFalseEastingGeoKey, getDouble("x_0")),
+      (ProjFalseNorthingGeoKey, getDouble("y_0"))
+    )
+
+    (geoKeysInt, doubles)
+  }
+
+  // MERCATOR_2SP & MERCATOR_1SP
+  private lazy val mercProps = {
+    val geoKeysInt = List(
+      (GTModelTypeGeoKey, ModelTypeProjected),
+      (ProjectedCSTypeGeoKey, UserDefinedCPV),
+      (ProjectionGeoKey, UserDefinedCPV),
+      (ProjCoordTransGeoKey, CT_Mercator)
+    )
+
+    val doubles = List(
+      (ProjNatOriginLatGeoKey, getDouble("lat_0")),
+      (ProjNatOriginLongGeoKey, getDouble("lon_0")),
+      (ProjStdParallel1GeoKey, getDouble("lat_ts")),
       (ProjScaleAtNatOriginGeoKey, getK(1.0)),
       (ProjFalseEastingGeoKey, getDouble("x_0")),
       (ProjFalseNorthingGeoKey, getDouble("y_0"))

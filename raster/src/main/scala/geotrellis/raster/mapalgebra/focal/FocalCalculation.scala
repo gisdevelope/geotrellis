@@ -37,10 +37,10 @@ object TargetCell {
  * a focal operation.
  */
 abstract class FocalCalculation[T](
-    val r: Tile, n: Neighborhood, analysisArea: Option[GridBounds], val target: TargetCell)
+    val r: Tile, n: Neighborhood, analysisArea: Option[GridBounds[Int]], val target: TargetCell)
   extends Resulting[T]
 {
-  val bounds: GridBounds = analysisArea.getOrElse(GridBounds(r))
+  val bounds: GridBounds[Int] = analysisArea.getOrElse(GridBounds(r))
 
   def execute(): T
 }
@@ -48,7 +48,7 @@ abstract class FocalCalculation[T](
 /**
  * A focal calculation that uses the Cursor focal strategy.
  */
-abstract class CursorCalculation[T](tile: Tile, n: Neighborhood, val analysisArea: Option[GridBounds], target: TargetCell)
+abstract class CursorCalculation[T](tile: Tile, n: Neighborhood, val analysisArea: Option[GridBounds[Int]], target: TargetCell)
   extends FocalCalculation[T](tile, n, analysisArea, target)
 {
   def traversalStrategy = TraversalStrategy.DEFAULT
@@ -85,7 +85,7 @@ abstract class CursorCalculation[T](tile: Tile, n: Neighborhood, val analysisAre
 /**
  * A focal calculation that uses the Cursor focal strategy.
  */
-abstract class KernelCalculation[T](tile: Tile, kernel: Kernel, val analysisArea: Option[GridBounds], target: TargetCell)
+abstract class KernelCalculation[T](tile: Tile, kernel: Kernel, val analysisArea: Option[GridBounds[Int]], target: TargetCell)
     extends FocalCalculation[T](tile, kernel, analysisArea, target)
 {
   // Benchmarking has declared ScanLineTraversalStrategy the unclear winner as a default (based on Convolve).
@@ -124,7 +124,7 @@ abstract class KernelCalculation[T](tile: Tile, kernel: Kernel, val analysisArea
  * A focal calculation that uses the Cellwise focal strategy
  */
 abstract class CellwiseCalculation[T] (
-    r: Tile, n: Neighborhood, analysisArea: Option[GridBounds], target: TargetCell)
+    r: Tile, n: Neighborhood, analysisArea: Option[GridBounds[Int]], target: TargetCell)
   extends FocalCalculation[T](r, n, analysisArea, target)
 {
   def traversalStrategy: Option[TraversalStrategy] = None
@@ -161,10 +161,10 @@ abstract class CellwiseCalculation[T] (
     case _ => sys.error("Cannot use cellwise calculation with this traversal strategy.")
   }
 
-  def add(r: Tile, x: Int, y: Int)
-  def remove(r: Tile, x: Int, y: Int)
+  def add(r: Tile, x: Int, y: Int): Unit
+  def remove(r: Tile, x: Int, y: Int): Unit
   def reset(): Unit
-  def setValue(x: Int, y: Int)
+  def setValue(x: Int, y: Int): Unit
 }
 
 trait CellwiseStrategyCalculation {
@@ -226,7 +226,7 @@ trait ShortArrayTileResult extends Resulting[Tile] { self: FocalCalculation[Tile
   /** [[ShortArrayTile]] that will be returned by the focal calculation */
   val cols: Int = bounds.width
   val rows: Int = bounds.height
-  val resultTile = ShortArrayTile(Array.ofDim[Short](cols * rows), cols, rows)
+  val resultTile = ShortArrayTile.empty(cols, rows)
 
   val copyOriginalValue: (Int, Int, Int, Int) => Unit = { (focusCol: Int, focusRow: Int, col: Int, row: Int) =>
     resultTile.set(col, row, r.get(focusCol, focusRow))

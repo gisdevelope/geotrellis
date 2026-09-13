@@ -16,10 +16,13 @@
 
 package geotrellis.raster
 
-import org.scalatest._
-import spire.syntax.cfor._
+import spire.implicits._
 
-class GridBoundsSpec extends FunSpec with Matchers{
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class GridBoundsSpec extends AnyFunSpec with Matchers {
+
   describe("GridBounds.minus") {
     it("subtracts an overlapping GridBounds that overflows bottom left") {
       val minuend = GridBounds(0, 0, 100, 100)
@@ -96,7 +99,7 @@ class GridBoundsSpec extends FunSpec with Matchers{
           GridBounds(0, 0, 75, 75),
           GridBounds(25, 25, 100, 100)
         )
-      GridBounds.distinct(gridBounds).map(_.sizeLong).sum should be ((101 * 101) - (25 * 25 * 2))
+      GridBounds.distinct(gridBounds).map(_.size).sum should be ((101 * 101) - (25 * 25 * 2))
     }
   }
 
@@ -140,7 +143,7 @@ class GridBoundsSpec extends FunSpec with Matchers{
       val expected = GridBounds(253, 255, 503, 505)
 
       actual shouldBe expected
-      actual.sizeLong shouldBe expected.sizeLong
+      actual.size shouldBe expected.size
     }
 
     it("should move to the left 10 and up 15") {
@@ -150,7 +153,7 @@ class GridBoundsSpec extends FunSpec with Matchers{
       val expected = GridBounds(2, 7, 22, 27)
 
       actual shouldBe expected
-      actual.sizeLong shouldBe expected.sizeLong
+      actual.size shouldBe expected.size
     }
   }
 

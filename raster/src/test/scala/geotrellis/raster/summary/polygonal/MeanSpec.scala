@@ -17,46 +17,34 @@
 package geotrellis.raster.summary.polygonal
 
 import geotrellis.raster._
-import geotrellis.vector._
+import geotrellis.raster.summary.polygonal.visitors.MeanVisitor
 import geotrellis.raster.testkit._
+import geotrellis.vector._
 
-import org.scalatest._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class MeanSpec extends FunSpec
-                  with Matchers
-                  with RasterMatchers
-                  with TileBuilders {
+class MeanSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
 
   describe("Mean") {
     val rs = createRaster(Array.fill(40*40)(1),40,40)
     val tile = rs.tile
     val extent = rs.extent
-    val zone = Extent(10,-10,30,10).toPolygon
+    val zone = Extent(10,-10,30,10).toPolygon()
 
     val multibandTile = MultibandTile(tile, tile, tile)
+    val multibandRaster = Raster(multibandTile, extent)
 
     it("computes Mean for Singleband") {
-      val result = tile.polygonalMean(extent, zone)
-
-      result should equal (1.0)
+      val result = rs.polygonalSummary(zone, MeanVisitor)
+      result.toOption.get.mean should equal(1.0)
     }
 
     it("computes Mean for Multiband") {
-      val result = multibandTile.polygonalMean(extent, zone)
-
-      result should equal (Array(1.0, 1.0, 1.0))
-    }
-
-    it("computes Double Mean for Singleband") {
-      val result = tile.polygonalMean(extent, zone)
-
-      result should equal (1.0)
-    }
-
-    it("computes Double Mean for for Multiband") {
-      val result = multibandTile.polygonalMean(extent, zone)
-
-      result should equal (Array(1.0, 1.0, 1.0))
+      multibandRaster.polygonalSummary(zone, MeanVisitor) match {
+        case Summary(result) => result.foreach { _.mean should equal(1.0) }
+        case _ => fail("polygonalSummary did not return a result")
+      }
     }
   }
 }

@@ -17,8 +17,6 @@
 package geotrellis.spark.mapalgebra.zonal
 
 import geotrellis.raster.mapalgebra.zonal._
-import geotrellis.raster.summary._
-import geotrellis.raster.histogram._
 import geotrellis.raster._
 import geotrellis.spark._
 
@@ -57,7 +55,7 @@ object Zonal {
   def percentage[K: ClassTag](rdd: RDD[(K, Tile)], zonesTileRdd: RDD[(K, Tile)], partitioner: Option[Partitioner] = None): RDD[(K, Tile)] = {
     val sc = rdd.sparkContext
     val zoneHistogramMap = histogram(rdd, zonesTileRdd, partitioner)
-    val zoneSumMap = zoneHistogramMap.map { case (k, v) => k -> v.totalCount }
+    val zoneSumMap = zoneHistogramMap.map { case (k, v) => k -> v.totalCount() }
     val bcZoneHistogramMap = sc.broadcast(zoneHistogramMap)
     val bcZoneSumMap = sc.broadcast(zoneSumMap)
 

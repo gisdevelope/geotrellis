@@ -17,15 +17,14 @@
 package geotrellis.raster.io.arg
 
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.reader.GeoTiffReader
-import geotrellis.vector.Extent
+
 import geotrellis.raster.testkit._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-import org.scalatest._
-
-class ArgReaderSpec extends FunSpec
+class ArgReaderSpec extends AnyFunSpec
                             with RasterMatchers
-                            with TestFiles
+                            with RasterTestFiles
                             with Matchers {
   describe("ArgReader") {
     it("should read a constant tile") {

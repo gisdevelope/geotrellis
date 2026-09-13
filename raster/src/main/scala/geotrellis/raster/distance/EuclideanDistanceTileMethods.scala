@@ -16,11 +16,11 @@
 
 package geotrellis.raster.distance
 
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.geom.Coordinate
 
 import geotrellis.raster.{RasterExtent, Tile}
 import geotrellis.util.MethodExtensions
-import geotrellis.vector.{MultiPoint, Point}
+import geotrellis.vector._
 
 trait EuclideanDistanceTileArrayMethods extends MethodExtensions[Array[Point]] {
   def euclideanDistanceTile(rasterExtent: RasterExtent): Tile = { EuclideanDistanceTile(self, rasterExtent) }
@@ -39,5 +39,5 @@ trait EuclideanDistanceTileCoordinateMethods extends MethodExtensions[Traversabl
 }
 
 trait EuclideanDistanceTileMultiPointMethods extends MethodExtensions[MultiPoint] {
-  def euclideanDistanceTile(rasterExtent: RasterExtent): Tile = { EuclideanDistanceTile(self.points.map{_.jtsGeom.getCoordinate}, rasterExtent) }
+  def euclideanDistanceTile(rasterExtent: RasterExtent): Tile = { EuclideanDistanceTile(self.points.map{_.getCoordinate}, rasterExtent) }
 }

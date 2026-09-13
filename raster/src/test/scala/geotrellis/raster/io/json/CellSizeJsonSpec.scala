@@ -17,30 +17,28 @@
 package geotrellis.raster.io.json
 
 import geotrellis.raster.CellSize
-import geotrellis.raster.io._
-import org.scalatest.{Assertions, FunSpec}
-import spray.json._
 
-class CellSizeJsonSpec extends FunSpec with Assertions {
+import io.circe.parser._
+import cats.syntax.either._
+
+import org.scalatest.Assertions
+import org.scalatest.funspec.AnyFunSpec
+
+
+class CellSizeJsonSpec extends AnyFunSpec with Assertions {
 
   describe("CellSize should not be truncated when reading") {
     val json =
       """
         |{
-        |   "cellSize": {
-        |     "width": 463.3127165274989,
-        |     "height": 463.3127165274989
-        |   }
+        |  "width": 463.3127165274989,
+        |  "height": 463.3127165274989
         |}
       """.stripMargin
-    json.parseJson match {
-      case JsObject(fields) => {
-        val cs = fields.get("cellSize").map(_.convertTo[CellSize])
-        assert(cs.isDefined)
-        assert(Math.abs(cs.get.height - 463.3127165274989) < .000000001)
-        assert(Math.abs(cs.get.width - 463.3127165274989) < .000000001)
-      }
-      case _ => fail("Could not parse cellSize")
-    }
+
+    val cs = decode[CellSize](json).valueOr(throw _)
+
+    assert(Math.abs(cs.height - 463.3127165274989) < .000000001)
+    assert(Math.abs(cs.width - 463.3127165274989) < .000000001)
   }
 }

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import sbt.Keys._
-import sbt._
-import sbt.complete.DefaultParsers._
+import sbt.Keys.*
+import sbt.*
+import sbt.complete.DefaultParsers.*
 import sbt.complete.Parser
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,21 +38,21 @@ object GTBenchmarkPlugin extends AutoPlugin {
   override def requires: Plugins = JmhPlugin
 
   object Keys {
-    val jmhOutputFormat = settingKey[String]("Output format: {text|csv|scsv|json|latex}")
-    val jmhOutputDir = settingKey[File]("Directory for writing JMH results")
+    val jmhOutputFormat = settingKey[String]("Output format: {text|csv|scsv|json|latex}").withRank(KeyRanks.Invisible)
+    val jmhOutputDir = settingKey[File]("Directory for writing JMH results").withRank(KeyRanks.Invisible)
     val jmhFileRegex = settingKey[Regex]("Filename regular expression for selecting files to benchmark")
-    val jmhThreads = settingKey[Option[Int]]("Number of JMH worker threads")
-    val jmhFork = settingKey[Option[Int]]("How many times to fork a single JMH benchmark")
+    val jmhThreads = settingKey[Option[Int]]("Number of JMH worker threads").withRank(KeyRanks.Invisible)
+    val jmhFork = settingKey[Option[Int]]("How many times to fork a single JMH benchmark").withRank(KeyRanks.Invisible)
     val jmhIterations = settingKey[Option[Int]]("Number of measurement iterations to do")
-    val jmhWarmupIterations = settingKey[Option[Int]]("Number of warmup iterations to do")
-    val jmhTimeUnit = settingKey[Option[String]]("Benchmark results time unit: {m|s|ms|us|ns}")
-    val jmhExtraOptions = settingKey[Option[String]]("Additional arguments to jmh:run before the filename regex")
+    val jmhWarmupIterations = settingKey[Option[Int]]("Number of warmup iterations to do").withRank(KeyRanks.Invisible)
+    val jmhTimeUnit = settingKey[Option[String]]("Benchmark results time unit: {m|s|ms|us|ns}").withRank(KeyRanks.Invisible)
+    val jmhExtraOptions = settingKey[Option[String]]("Additional arguments to jmh:run before the filename regex").withRank(KeyRanks.Invisible)
     val bench = taskKey[Unit]("Execute JMH benchmarks")
     val benchOnly = inputKey[Unit]("Execute JMH benchmarks on a single class")
   }
 
   val autoImport = Keys
-  import autoImport._
+  import autoImport.*
 
   override def projectSettings = Seq(
     jmhOutputFormat := "json",
@@ -91,7 +91,7 @@ object GTBenchmarkPlugin extends AutoPlugin {
 
     val args = s" $t $f $i $wi $tu -rf $rf -rff $rff $extra $pat"
     state.value.log.debug("Starting: jmh:run " + args)
-    (run in Jmh).toTask(args)
+    (Jmh / run).toTask(args)
   }
 
   val benchFilesParser: Def.Initialize[State => Parser[File]] = Def.setting { (state: State) =>
@@ -101,12 +101,12 @@ object GTBenchmarkPlugin extends AutoPlugin {
     )
 
     val dirs = Seq(
-      extracted.get(scalaSource in Compile),
-      extracted.get(scalaSource in Test)
+      extracted.get(Compile / scalaSource),
+      extracted.get(Test / scalaSource)
     )
 
     def benchFileParser(dir: File) = fileParser(dir)
-      .filter(f ⇒ pat.accept(f.name), s ⇒ "Not a benchmark file: " + s)
+      .filter(f => pat.accept(f.name), s => "Not a benchmark file: " + s)
 
     val parsers = dirs.map(benchFileParser)
 

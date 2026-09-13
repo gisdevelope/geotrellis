@@ -16,17 +16,13 @@
 
 package geotrellis.raster.io.geotiff
 
-object Tags {
-  def empty: Tags = Tags(Map(), List())
-
-  final val AREA_OR_POINT = "AREA_OR_POINT"
-  final val TIFFTAG_DATETIME = "TIFFTAG_DATETIME"
-}
+import io.circe.generic.JsonCodec
 
 /** Tags are user data that the GeoTiff is tagged with.
   * While GDAL calls the data "metadata", we call them tags.
   * See the "Metadata" section here: http://www.gdal.org/gdal_datamodel.html
   */
+@JsonCodec
 case class Tags(headTags: Map[String, String], bandTags: List[Map[String, String]]) {
   def bandCount = bandTags.size
 
@@ -53,7 +49,10 @@ case class Tags(headTags: Map[String, String], bandTags: List[Map[String, String
     val bandTagsXml: Seq[scala.xml.Elem] =
       bandTags.zipWithIndex.flatMap { case (map, i) =>
         map.toSeq.map { case (key, value) =>
-          <Item name={key} sample={i.toString}>{value}</Item>
+          if (Tags.TAG_ROLES.contains(key.toLowerCase()))
+            <Item name={key} sample={i.toString} role={key.toLowerCase}>{value}</Item>
+          else
+            <Item name={key} sample={i.toString}>{value}</Item>
         }
       }
 
@@ -62,4 +61,20 @@ case class Tags(headTags: Map[String, String], bandTags: List[Map[String, String
       {bandTagsXml}
     </GDALMetadata>
   }
+}
+
+object Tags {
+  def empty: Tags = Tags(Map(), List())
+
+  final val AREA_OR_POINT = "AREA_OR_POINT"
+  final val TIFFTAG_DATETIME = "TIFFTAG_DATETIME"
+  final val TIFFTAG_IMAGEDESCRIPTION = "TIFFTAG_IMAGEDESCRIPTION"
+  final val TAG_ROLES = Set(
+    "offset",
+    "scale",
+    "description",
+    "unittype",
+    "colorinterp"
+  )
+
 }

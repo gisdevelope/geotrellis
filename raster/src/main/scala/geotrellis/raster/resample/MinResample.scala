@@ -20,7 +20,6 @@ import geotrellis.raster._
 import geotrellis.vector.Extent
 
 import scala.math
-import spire.syntax.cfor._
 
 /**
   * Takes the average value for all cells within the index boundaries provided by
@@ -29,10 +28,14 @@ import spire.syntax.cfor._
 class MinResample(tile: Tile, extent: Extent, targetCS: CellSize)
     extends AggregateResample(tile, extent, targetCS) {
 
-  private def calculateMin(indices: Seq[(Int, Int)]): Int =
-    indices.foldLeft(Int.MaxValue) { case (currentMin, coords) =>
-      math.min(currentMin, tile.get(coords._1, coords._2))
+  private def calculateMin(indices: Seq[(Int, Int)]): Int = {
+    val intMin = indices.foldLeft(Int.MaxValue) { case (currentMin, coords) =>
+      val v = tile.get(coords._1, coords._2)
+      // NODATA would *always* be min
+      if (isData(v)) math.min(currentMin, v) else currentMin
     }
+    if (intMin == Int.MaxValue) NODATA else intMin
+  }
 
   private def calculateMinDouble(indices: Seq[(Int, Int)]): Double = {
     val doubleMin = indices.foldLeft(Double.MaxValue) { case (currentMin, coords) =>
@@ -40,7 +43,7 @@ class MinResample(tile: Tile, extent: Extent, targetCS: CellSize)
       // Double.NaN would *always* be max
       if (isData(v)) math.min(currentMin, v) else currentMin
     }
-    if (doubleMin == Double.MaxValue) NODATA else doubleMin
+    if (doubleMin == Double.MaxValue) doubleNODATA else doubleMin
   }
 
   def resampleValid(x: Double, y: Double): Int = calculateMin(contributions(x, y))

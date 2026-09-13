@@ -17,11 +17,10 @@
 package geotrellis.raster.vectorize
 
 import geotrellis.raster._
-import geotrellis.raster.rasterize.polygon.PolygonRasterizer
 import geotrellis.raster.regiongroup.{RegionGroup, RegionGroupOptions}
 import geotrellis.vector._
 
-import com.vividsolutions.jts.geom
+import org.locationtech.jts.geom
 
 import scala.collection.mutable
 
@@ -118,10 +117,10 @@ object Vectorize {
             shellPoly.geom.foreach(rasterExtent)(callback)
 
             val holes = {
-              val rings = callback.linearRings.map(Line.apply)
+              val rings = callback.linearRings.map{ lr => LineString(lr.getCoordinates) }
               if(rings.size > 1) {
                 // We need to get rid of intersecting holes.
-                rings.map(Polygon(_).buffer(0)).unionGeometries.asMultiPolygon match {
+                rings.map(Polygon(_).buffer(0).asInstanceOf[Polygon]).unionGeometries.asMultiPolygon match {
                   case Some(mp) => mp.polygons.map(_.exterior).toSet
                   case None => sys.error(s"Invalid geometries returned by polygon holes: ${rings.map(Polygon.apply).unionGeometries}")
                 }
@@ -131,7 +130,7 @@ object Vectorize {
             }
 
             polygons += PolygonFeature(
-              Polygon(Line(shell), holes),
+              Polygon(LineString(shell.getCoordinates), holes),
               rgr.regionMap(v)
             )
 

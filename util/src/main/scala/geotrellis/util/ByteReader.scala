@@ -16,7 +16,7 @@
 
 package geotrellis.util
 
-import java.nio.{Buffer, ByteBuffer, ByteOrder}
+import java.nio.{ByteBuffer, ByteOrder}
 import scala.language.implicitConversions
 
 /**
@@ -24,7 +24,7 @@ import scala.language.implicitConversions
  * source.
  */
 trait ByteReader {
-  def position: Long
+  def position(): Long
   def position(i: Long): ByteReader
 
   def getBytes(length: Int): Array[Byte]
@@ -36,7 +36,7 @@ trait ByteReader {
   def getDouble: Double
   def getLong: Long
 
-  def order: ByteOrder
+  def order(): ByteOrder
   def order(byteOrder: ByteOrder): Unit
 }
 
@@ -47,7 +47,7 @@ trait ByteReader {
 object ByteReader {
   implicit def byteBuffer2ByteReader(byteBuffer: ByteBuffer): ByteReader = {
     new ByteReader() {
-      def position: Long = byteBuffer.position.toLong
+      def position(): Long = byteBuffer.position().toLong
       def position(i: Long): ByteReader = { byteBuffer.position(i.toInt) ; this }
 
       def getBytes(length: Int): Array[Byte] = {
@@ -69,7 +69,7 @@ object ByteReader {
       def getDouble = byteBuffer.getDouble
       def getLong = byteBuffer.getLong
 
-      def order = byteBuffer.order()
+      def order() = byteBuffer.order()
       def order(byteOrder: ByteOrder): Unit =
         byteBuffer.order(byteOrder)
     }

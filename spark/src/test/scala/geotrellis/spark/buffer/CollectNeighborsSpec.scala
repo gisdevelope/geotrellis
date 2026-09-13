@@ -16,18 +16,15 @@
 
 package geotrellis.spark.buffer
 
+import geotrellis.layer._
+import geotrellis.raster.buffer.Direction
+import geotrellis.raster.buffer.Direction._
 import geotrellis.spark._
-import geotrellis.spark.io._
-import geotrellis.raster.io.geotiff.SinglebandGeoTiff
 import geotrellis.spark.testkit._
 
-import org.apache.spark.rdd.RDD
+import org.scalatest.funspec.AnyFunSpec
 
-import org.scalatest.FunSpec
-
-import Direction._
-
-class CollectNeighborsSpec extends FunSpec with TestEnvironment {
+class CollectNeighborsSpec extends AnyFunSpec with TestEnvironment {
 
   describe("BufferWithNeighbors") {
     /*     x
@@ -58,8 +55,8 @@ class CollectNeighborsSpec extends FunSpec with TestEnvironment {
 
     val neighbors: Map[SpatialKey, Iterable[(Direction, (SpatialKey, String))]] =
       rdd
-        .collectNeighbors
-        .collect
+        .collectNeighbors()
+        .collect()
         .toMap
 
     it("should not contain keys that would be a neighbor but with no center") {

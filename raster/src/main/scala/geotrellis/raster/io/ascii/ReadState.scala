@@ -16,10 +16,7 @@
 
 package geotrellis.raster.io.ascii
 
-import scala.math.{Numeric, min, max, abs, round, floor, ceil}
-import java.io.{File, FileInputStream, FileOutputStream}
 
-import geotrellis._
 import geotrellis.raster._
 
 import spire.syntax.cfor._
@@ -56,7 +53,7 @@ trait ReadState {
   /**
     * Called for cleanup after the ReadState is no longer used.
     */
-  def destroy() {}
+  def destroy(): Unit = {}
 
   /**
     * Overwrite this to translate data from source to destination,

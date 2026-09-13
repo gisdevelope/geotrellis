@@ -18,11 +18,12 @@ package geotrellis.raster.mapalgebra.local
 
 import geotrellis.raster._
 
-import org.scalatest._
-
 import geotrellis.raster.testkit._
 
-class VarietySpec extends FunSpec 
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class VarietySpec extends AnyFunSpec
                      with Matchers 
                      with RasterMatchers 
                      with TileBuilders {
@@ -69,7 +70,7 @@ class VarietySpec extends FunSpec
         6, 4
       )
 
-      val result = Seq(r1, r2, r3, r4, r5).localVariety
+      val result = Seq(r1, r2, r3, r4, r5).localVariety()
 
       for(col <- 0 until 6) {
         for(row <- 0 until 4) {

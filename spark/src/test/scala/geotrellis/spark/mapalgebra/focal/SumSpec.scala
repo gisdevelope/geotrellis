@@ -16,17 +16,15 @@
 
 package geotrellis.spark.mapalgebra.focal
 
-import geotrellis.vector.Extent
 import geotrellis.raster._
-import geotrellis.raster.mapalgebra.focal._
+import geotrellis.raster.Neighborhoods.{Square, Circle}
 
 import geotrellis.spark._
-import geotrellis.spark.mapalgebra.focal._
 import geotrellis.spark.testkit._
 
-import org.scalatest._
+import org.scalatest.funspec.AnyFunSpec
 
-class SumSpec extends FunSpec with TestEnvironment {
+class SumSpec extends AnyFunSpec with TestEnvironment {
 
   describe("Sum Focal Spec") {
 
@@ -45,7 +43,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(1)).stitch.toArray
+      val res = rasterRDD.focalSum(Square(1)).stitch().tile.toArray()
 
       val expected = Array(
         3, 5, 7,    8, 9, 8,    7, 6, 4,
@@ -71,7 +69,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(2)).stitch.toArray
+      val res = rasterRDD.focalSum(Square(2)).stitch().tile.toArray()
 
       val expected = Array(
         8, 14, 20,   24,24,24,    21,15, 9,
@@ -97,7 +95,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(2), TargetCell.NoData).stitch.toArray
+      val res = rasterRDD.focalSum(Square(2), TargetCell.NoData).stitch().tile.toArray()
 
       val expected = Array(
         8,1, 1,   1, 1, 1,   1, 1, 1,
@@ -123,7 +121,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Circle(1)).stitch.toArray
+      val res = rasterRDD.focalSum(Circle(1)).stitch().tile.toArray()
 
       val expected = Array(
         2, 3, 4,    5, 5, 5,    4, 4, 3,
@@ -149,7 +147,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       ).toCollection
 
-      val res = rasterCollection.focalSum(Square(1)).stitch.toArray
+      val res = rasterCollection.focalSum(Square(1)).stitch().tile.toArray()
 
       val expected = Array(
         3, 5, 7,    8, 9, 8,    7, 6, 4,
@@ -175,7 +173,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       ).toCollection
 
-      val res = rasterCollection.focalSum(Square(2)).stitch.toArray
+      val res = rasterCollection.focalSum(Square(2)).stitch().tile.toArray()
 
       val expected = Array(
         8, 14, 20,   24,24,24,    21,15, 9,
@@ -201,7 +199,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       ).toCollection
 
-      val res = rasterCollection.focalSum(Circle(1)).stitch.toArray
+      val res = rasterCollection.focalSum(Circle(1)).stitch().tile.toArray()
 
       val expected = Array(
         2, 3, 4,    5, 5, 5,    4, 4, 3,
@@ -227,7 +225,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(1), TargetCell.NoData).stitch.toArray
+      val res = rasterRDD.focalSum(Square(1), TargetCell.NoData).stitch().tile.toArray()
 
       val expected = Array(
         11,12, 13,   21, 22, 23,   31, 32, 33,
@@ -253,7 +251,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(1), TargetCell.NoData).stitch.toArray
+      val res = rasterRDD.focalSum(Square(1), TargetCell.NoData).stitch().tile.toArray()
 
       val expected = Array(
         3,1, 1,   1, 1, 1,   1, 1, 1,
@@ -279,7 +277,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Square(1), TargetCell.Data).stitch.toArray
+      val res = rasterRDD.focalSum(Square(1), TargetCell.Data).stitch().tile.toArray()
 
       val expected = Array(
         nd, 5, 7,    8, 9, 8,    7, 6, 4,
@@ -305,7 +303,7 @@ class SumSpec extends FunSpec with TestEnvironment {
         TileLayout(3, 2, 3, 2)
       )
 
-      val res = rasterRDD.focalSum(Circle(1), TargetCell.Data).stitch.toArray
+      val res = rasterRDD.focalSum(Circle(1), TargetCell.Data).stitch().tile.toArray()
 
       val expected = Array(
         nd, 3, 4,    5, 5, 5,    4, 4, 3,

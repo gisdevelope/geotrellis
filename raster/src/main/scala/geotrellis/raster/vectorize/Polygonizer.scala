@@ -17,9 +17,8 @@
 package geotrellis.raster.vectorize
 
 import geotrellis.raster._
-import geotrellis.vector._
 
-import com.vividsolutions.jts.geom
+import org.locationtech.jts.geom
 import scala.collection.mutable
 
 /**
@@ -223,7 +222,7 @@ class Polygonizer(val r: Tile, rasterExtent: RasterExtent) {
       }
     }
 
-    if(direction == NOTFOUND && startCol < cols) {
+    if(direction == NOTFOUND && startCol + 1 < cols) {
       if(r.get(startCol + 1, startRow) == targetValue) {
         direction = RIGHT
       }

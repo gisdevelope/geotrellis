@@ -16,33 +16,36 @@
 
 package geotrellis.spark.viewshed
 
-import geotrellis.raster.{Tile, DoubleArrayTile}
+import geotrellis.layer.{Metadata, TileLayerMetadata}
+import geotrellis.raster.Tile
 import geotrellis.raster.viewshed.R2Viewshed._
-import geotrellis.spark._
+import geotrellis.layer._
 import geotrellis.util.MethodExtensions
-
 import org.apache.spark.rdd.RDD
 import org.apache.spark.SparkContext
 
-import scala.collection.mutable
 import scala.reflect.ClassTag
 
 
-abstract class RDDViewshedMethods[K: (? => SpatialKey): ClassTag, V: (? => Tile)]
+abstract class RDDViewshedMethods[K: * => SpatialKey: ClassTag, V: * => Tile]
     extends MethodExtensions[RDD[(K, V)] with Metadata[TileLayerMetadata[K]]] {
 
   def viewshed(
     points: Seq[Viewpoint],
     maxDistance: Double = Double.PositiveInfinity,
     curvature: Boolean = true,
-    operator: AggregationOperator = Or
+    operator: AggregationOperator = Or,
+    epsilon: Double = (1/math.Pi),
+    scatter: Boolean = true
   )(implicit sc: SparkContext): RDD[(K, Tile)] with Metadata[TileLayerMetadata[K]] =
     IterativeViewshed(
       elevation = self,
       ps = points,
       maxDistance = maxDistance,
       curvature = curvature,
-      operator = operator
+      operator = operator,
+      epsilon = epsilon,
+      scatter = scatter
     )
 
 }

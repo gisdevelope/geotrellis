@@ -17,18 +17,14 @@
 package geotrellis.raster.io.geotiff
 
 import geotrellis.raster._
-import geotrellis.raster.io.geotiff.writer.GeoTiffWriter
-import geotrellis.raster.mapalgebra.local._
-
-import geotrellis.vector.Extent
-
-import geotrellis.proj4._
 
 import geotrellis.raster.testkit._
 
-import org.scalatest._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
 
-class UInt32GeoTiffMultibandTileSpec extends FunSpec
+class UInt32GeoTiffMultibandTileSpec extends AnyFunSpec
     with Matchers
     with BeforeAndAfterAll
     with RasterMatchers
@@ -43,7 +39,7 @@ class UInt32GeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with pixel interleave, striped") {
       val tile =
-        MultibandGeoTiff(p("striped", "pixel")).tile.toArrayTile
+        MultibandGeoTiff(p("striped", "pixel")).tile.toArrayTile()
 
       val actual = tile.combineDouble(_.sum)
       val expected = FloatRawArrayTile(Array.ofDim[Float](tile.cols * tile.rows).fill(6), tile.cols, tile.rows)
@@ -53,7 +49,7 @@ class UInt32GeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with pixel interleave, tiled") {
       val tile =
-        MultibandGeoTiff(p("tiled", "pixel")).tile.toArrayTile
+        MultibandGeoTiff(p("tiled", "pixel")).tile.toArrayTile()
 
       val actual = tile.combineDouble(_.sum)
       val expected = FloatRawArrayTile(Array.ofDim[Float](tile.cols * tile.rows).fill(6), tile.cols, tile.rows)
@@ -63,7 +59,7 @@ class UInt32GeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with band interleave, striped") {
       val tile =
-        MultibandGeoTiff(p("striped", "band")).tile.toArrayTile
+        MultibandGeoTiff(p("striped", "band")).tile.toArrayTile()
 
       val actual = tile.combineDouble(_.sum)
       val expected = FloatRawArrayTile(Array.ofDim[Float](tile.cols * tile.rows).fill(6), tile.cols, tile.rows)
@@ -73,7 +69,7 @@ class UInt32GeoTiffMultibandTileSpec extends FunSpec
 
     it("should combine all bands with band interleave, tiled") {
       val tile =
-        MultibandGeoTiff(p("tiled", "band")).tile.toArrayTile
+        MultibandGeoTiff(p("tiled", "band")).tile.toArrayTile()
 
       val actual = tile.combineDouble(_.sum)
       val expected = FloatRawArrayTile(Array.ofDim[Float](tile.cols * tile.rows).fill(6), tile.cols, tile.rows)

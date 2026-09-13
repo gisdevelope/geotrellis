@@ -20,20 +20,21 @@ import geotrellis.raster._
 import geotrellis.raster.merge._
 import geotrellis.raster.prototype._
 import geotrellis.raster.resample._
-import geotrellis.spark._
+import geotrellis.layer._
 import geotrellis.util._
 
+import org.log4s._
 import org.apache.spark.rdd._
 
 import scala.reflect.ClassTag
 
 object CutTiles {
-  @transient private lazy val logger = LazyLogging(this)
+  @transient private[this] lazy val logger = getLogger
 
   def apply[
-    K1: (? => TilerKeyMethods[K1, K2]),
+    K1: * => TilerKeyMethods[K1, K2],
     K2: SpatialComponent: ClassTag,
-    V <: CellGrid: ClassTag: (? => TileMergeMethods[V]): (? => TilePrototypeMethods[V])
+    V <: CellGrid[Int]: ClassTag: * => TileMergeMethods[V]: * => TilePrototypeMethods[V]
   ] (
     rdd: RDD[(K1, V)],
     cellType: CellType,
@@ -42,7 +43,7 @@ object CutTiles {
   ): RDD[(K2, V)] = {
     logger.debug(s"CutTiles($rdd, $cellType, $resampleMethod)")
     val mapTransform = layoutDefinition.mapTransform
-    val (tileCols, tileRows) = layoutDefinition.tileLayout.tileDimensions
+    val Dimensions(tileCols, tileRows) = layoutDefinition.tileLayout.tileDimensions
 
     rdd
       .flatMap { tup =>

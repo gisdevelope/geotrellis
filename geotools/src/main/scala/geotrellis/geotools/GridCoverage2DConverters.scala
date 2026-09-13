@@ -16,21 +16,20 @@
 
 package geotrellis.geotools
 
-import geotrellis.proj4.{CRS, LatLng}
+import geotrellis.proj4.CRS
 import geotrellis.raster._
 import geotrellis.raster.io.geotiff.util._
 import geotrellis.vector.Extent
-
 import it.geosolutions.imageio.utilities.ImageIOUtilities
 import org.geotools.coverage.Category
 import org.geotools.coverage.GridSampleDimension
 import org.geotools.coverage.grid._
-import org.geotools.geometry.Envelope2D
 import org.geotools.referencing.{CRS => GeoToolsCRS}
-import org.geotools.resources.coverage.CoverageUtilities
+import org.geotools.coverage.util.CoverageUtilities
 import org.geotools.util.NumberRange
-import org.opengis.coverage.SampleDimensionType
-import org.opengis.referencing.crs.CoordinateReferenceSystem
+import org.geotools.geometry.jts.ReferencedEnvelope
+import org.geotools.api.coverage._
+import org.geotools.api.referencing.crs.CoordinateReferenceSystem
 import spire.syntax.cfor._
 
 import java.awt.Color
@@ -198,18 +197,18 @@ object GridCoverage2DConverters {
   }
 
   /**
-    * A function to produce a GeoTools Envelope2D from a Geotrellis
+    * A function to produce a GeoTools ReferencedEnvelope from a Geotrellis
     * Extent and CRS.
     *
     * @param  extent  The Geotrellis Extent
     * @param  crs     The CRS of the raster
     *
-    * @return         A GeoTools Envelope2D
+    * @return         A GeoTools ReferencedEnvelope
     */
-  def getEnvelope2D(extent: Extent): Envelope2D = {
+  def getEnvelope2D(extent: Extent): ReferencedEnvelope = {
     val Extent(xmin, ymin, xmax, ymax) = extent
 
-    new Envelope2D(null, xmin, ymin, (xmax - xmin), (ymax - ymin))
+    ReferencedEnvelope.rect(xmin, ymin, xmax - xmin, ymax - ymin, null)
   }
 
   def getGeotoolsCRS(crs: CRS): CoordinateReferenceSystem = {
@@ -222,20 +221,20 @@ object GridCoverage2DConverters {
   }
 
   /**
-    * A function to produce a GeoTools Envelope2D from a Geotrellis
+    * A function to produce a GeoTools ReferencedEnvelope from a Geotrellis
     * Extent and CRS. If the CRS cannot be converted, a null GeoTools
     * CRS is used.
     *
     * @param  extent  The Geotrellis Extent
     * @param  crs     The CRS of the raster
     *
-    * @return         A GeoTools Envelope2D
+    * @return         A GeoTools ReferencedEnvelope
     */
-  def getEnvelope2D(extent: Extent, crs: CRS): Envelope2D = {
+  def getEnvelope2D(extent: Extent, crs: CRS): ReferencedEnvelope = {
     val Extent(xmin, ymin, xmax, ymax) = extent
     val geoToolsCRS = getGeotoolsCRS(crs)
 
-    new Envelope2D(geoToolsCRS, xmin, ymin, (xmax - xmin), (ymax - ymin))
+    ReferencedEnvelope.rect(xmin, ymin, xmax - xmin, ymax - ymin, geoToolsCRS)
   }
 
   def getValueRange(cellType: CellType): (Double, Double) =
@@ -293,7 +292,7 @@ object GridCoverage2DConverters {
               case ct: UByteCells =>
                 PixelInterleaveBandArrayTile(UByteArrayTile(data, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(UByteArrayTile(data, innerCols, rows, UByteCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(UByteArrayTile(data, innerCols, rows, UByteCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -304,7 +303,7 @@ object GridCoverage2DConverters {
               case ct: UByteCells =>
                 UByteArrayTile(data, cols, rows, ct)
               case _ =>
-                UByteArrayTile(data, cols, rows, UByteCellType).convert(cellType).toArrayTile
+                UByteArrayTile(data, cols, rows, UByteCellType).convert(cellType).toArrayTile()
             }
           case mp: MultiPixelPackedSampleModel =>
             // Tricky sample model, just do the slow direct thing.
@@ -330,7 +329,7 @@ object GridCoverage2DConverters {
               case ct: UShortCells =>
                 PixelInterleaveBandArrayTile(UShortArrayTile(data, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(UShortArrayTile(data, innerCols, rows, UShortCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(UShortArrayTile(data, innerCols, rows, UShortCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -339,7 +338,7 @@ object GridCoverage2DConverters {
               case ct: UShortCells =>
                 UShortArrayTile(data, cols, rows, ct)
               case _ =>
-                UShortArrayTile(data, cols, rows, UShortCellType).convert(cellType).toArrayTile
+                UShortArrayTile(data, cols, rows, UShortCellType).convert(cellType).toArrayTile()
             }
 
           case _ =>
@@ -355,7 +354,7 @@ object GridCoverage2DConverters {
               case ct: ShortCells =>
                 PixelInterleaveBandArrayTile(ShortArrayTile(data, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(ShortArrayTile(data, innerCols, rows, ShortCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(ShortArrayTile(data, innerCols, rows, ShortCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -364,7 +363,7 @@ object GridCoverage2DConverters {
               case ct: ShortCells =>
                 ShortArrayTile(data, cols, rows, ct)
               case _ =>
-                ShortArrayTile(data, cols, rows, ShortCellType).convert(cellType).toArrayTile
+                ShortArrayTile(data, cols, rows, ShortCellType).convert(cellType).toArrayTile()
             }
 
           case _ =>
@@ -384,7 +383,7 @@ object GridCoverage2DConverters {
                 val floatData = data.map { z => (z & 0xFFFFFFFFL).toFloat }
                 PixelInterleaveBandArrayTile(FloatArrayTile(floatData, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(IntArrayTile(data, innerCols, rows, IntCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(IntArrayTile(data, innerCols, rows, IntCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -397,7 +396,7 @@ object GridCoverage2DConverters {
                 val floatData = data.map { z => (z & 0xFFFFFFFFL).toFloat }
                 FloatArrayTile(floatData, cols, rows, ct)
               case _ =>
-                IntArrayTile(data, cols, rows, IntCellType).convert(cellType).toArrayTile
+                IntArrayTile(data, cols, rows, IntCellType).convert(cellType).toArrayTile()
             }
 
           case _ =>
@@ -413,7 +412,7 @@ object GridCoverage2DConverters {
               case ct: FloatCells =>
                 PixelInterleaveBandArrayTile(FloatArrayTile(data, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(FloatArrayTile(data, innerCols, rows, FloatCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(FloatArrayTile(data, innerCols, rows, FloatCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -422,7 +421,7 @@ object GridCoverage2DConverters {
               case ct: FloatCells =>
                 FloatArrayTile(data, cols, rows, ct)
               case _ =>
-                FloatArrayTile(data, cols, rows, FloatCellType).convert(cellType).toArrayTile
+                FloatArrayTile(data, cols, rows, FloatCellType).convert(cellType).toArrayTile()
             }
 
           case _ =>
@@ -438,7 +437,7 @@ object GridCoverage2DConverters {
               case ct: DoubleCells =>
                 PixelInterleaveBandArrayTile(DoubleArrayTile(data, innerCols, rows, ct), numBands, bandIndex)
               case _ =>
-                PixelInterleaveBandArrayTile(DoubleArrayTile(data, innerCols, rows, DoubleCellType).convert(cellType).toArrayTile, numBands, bandIndex)
+                PixelInterleaveBandArrayTile(DoubleArrayTile(data, innerCols, rows, DoubleCellType).convert(cellType).toArrayTile(), numBands, bandIndex)
             }
 
           case _: BandedSampleModel =>
@@ -447,7 +446,7 @@ object GridCoverage2DConverters {
               case ct: DoubleCells =>
                 DoubleArrayTile(data, cols, rows, ct)
               case _ =>
-                DoubleArrayTile(data, cols, rows, DoubleCellType).convert(cellType).toArrayTile
+                DoubleArrayTile(data, cols, rows, DoubleCellType).convert(cellType).toArrayTile()
             }
 
           case _ =>
@@ -749,7 +748,7 @@ object GridCoverage2DConverters {
 
                     banks(b) = bandValues
                   case _ =>
-                    banks(b) = band.toArray
+                    banks(b) = band.toArray()
                 }
             }
           }
@@ -840,7 +839,7 @@ object GridCoverage2DConverters {
 
                     banks(b) = bandValues
                   case _ =>
-                    banks(b) = band.toArrayDouble
+                    banks(b) = band.toArrayDouble()
                 }
             }
           }

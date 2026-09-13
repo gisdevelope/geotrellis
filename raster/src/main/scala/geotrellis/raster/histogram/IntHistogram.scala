@@ -16,10 +16,9 @@
 
 package geotrellis.raster.histogram
 
-import geotrellis.raster.NODATA
 import geotrellis.raster.summary.Statistics
 
-import math.{abs, round, sqrt}
+import math.sqrt
 import spire.syntax.cfor._
 
 
@@ -38,7 +37,7 @@ abstract trait IntHistogram extends Histogram[Int] {
     * in the histogram.
     */
   def foreach(f: (Int, Long) => Unit): Unit = {
-    values.foreach(z => f(z, itemCount(z)))
+    values().foreach(z => f(z, itemCount(z)))
   }
 
   /**
@@ -46,7 +45,7 @@ abstract trait IntHistogram extends Histogram[Int] {
     * histogram.
     */
   def mode(): Option[Int] = {
-    if(totalCount == 0) { return None }
+    if(totalCount() == 0) { return None }
     val localValues = values()
     var mode = localValues(0)
     var count = itemCount(mode)
@@ -67,7 +66,7 @@ abstract trait IntHistogram extends Histogram[Int] {
     * histogram.
     */
   def median(): Option[Int] = {
-    if (totalCount == 0) {
+    if (totalCount() == 0) {
       None
     } else {
       val localValues = values()
@@ -87,7 +86,7 @@ abstract trait IntHistogram extends Histogram[Int] {
     * histogram.
     */
   def mean(): Option[Double] = {
-    if(totalCount == 0) { return None }
+    if(totalCount() == 0) { return None }
 
     val localValues = rawValues()
     var mean = 0.0
@@ -109,7 +108,7 @@ abstract trait IntHistogram extends Histogram[Int] {
     * the histogram.  Contains among other things: mean, mode, median,
     * and so-forth.
     */
-  def statistics() = {
+  def statistics(): Option[Statistics[Int]] = {
     val localValues = values()
     if (localValues.length == 0) {
       None

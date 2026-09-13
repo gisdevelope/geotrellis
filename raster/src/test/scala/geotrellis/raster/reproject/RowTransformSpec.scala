@@ -24,11 +24,10 @@ import geotrellis.proj4._
 import geotrellis.vector.testkit._
 import geotrellis.raster.io.geotiff._
 
-import org.scalatest._
 
-import spire.syntax.cfor._
+import org.scalatest.funspec.AnyFunSpec
 
-class RowTransformSpec extends FunSpec
+class RowTransformSpec extends AnyFunSpec
     with TileBuilders
     with RasterMatchers
     with GeoTiffTestUtils {
@@ -36,7 +35,7 @@ class RowTransformSpec extends FunSpec
 
   val LLtoWM = Transform(LatLng, WebMercator)
   val WMtoLL = Transform(WebMercator, LatLng)
-  val pointsWM = GeoJson.fromFile[JsonFeatureCollection](path).getAllPoints
+  val pointsWM = GeoJson.fromFile[JsonFeatureCollection](path).getAllPoints()
   val pointsLL = pointsWM.map(_.reproject(WMtoLL))
 
   val srcX = pointsLL.map(_.x).toArray

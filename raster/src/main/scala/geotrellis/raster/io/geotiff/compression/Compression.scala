@@ -16,6 +16,32 @@
 
 package geotrellis.raster.io.geotiff.compression
 
+import io.circe._
+import io.circe.syntax._
+
 trait Compression extends Serializable {
   def createCompressor(segmentCount: Int): Compressor
+
+  def withPredictor(predictor: Predictor): Compression =
+    (segmentCount: Int) => createCompressor(segmentCount).withPredictorEncoding(predictor)
+}
+
+object Compression {
+  implicit val compressionDecoder: Decoder[Compression] =
+    (c: HCursor) =>
+      c.downField("compressionType").as[String].map {
+        case "NoCompression" => NoCompression
+        case _ =>
+          c.downField("level").as[Int] match {
+            case Left(_) => DeflateCompression()
+            case Right(i) => DeflateCompression(i)
+          }
+      }
+
+  implicit val compressionEncoder: Encoder[Compression] = {
+    case NoCompression =>
+      Json.obj(("compressionType", "NoCompression".asJson))
+    case d: DeflateCompression =>
+      Json.obj(("compressionType", "Deflate".asJson), ("level", d.level.asJson))
+  }
 }

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package geotrellis.raster
 
 import geotrellis.bench.init
@@ -41,11 +42,11 @@ class GenericRasterBench  {
     // There may be a better way of doing this using separate `State` classes
     // that are injected on-demand by the framework.
     params.getBenchmark.split('.').last match {
-      case "genericRasterMap" ⇒
-        genericRaster = new GRaster(init(len)(Random.nextInt))
-      case "rasterMap" ⇒
-        tile = ArrayTile(init(len)(Random.nextInt), size, size)
-      case _ ⇒ throw new MatchError("Have a new benchmark without initialization?")
+      case "genericRasterMap" =>
+        genericRaster = new GRaster(init(len)(Random.nextInt()))
+      case "rasterMap" =>
+        tile = ArrayTile(init(len)(Random.nextInt()), size, size)
+      case _ => throw new MatchError("Have a new benchmark without initialization?")
     }
   }
 

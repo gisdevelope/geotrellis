@@ -17,10 +17,12 @@
 package geotrellis.raster.costdistance
 
 import geotrellis.raster._
-import geotrellis.vector.Line
-import org.scalatest._
+import geotrellis.vector._
 
-class CostDistanceWithPathsSpec extends FunSpec with Matchers {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class CostDistanceWithPathsSpec extends AnyFunSpec with Matchers {
 
   val Eps = 1e-7
 
@@ -36,7 +38,7 @@ class CostDistanceWithPathsSpec extends FunSpec with Matchers {
       ), 5, 5)
 
       val correctCost = math.sqrt(2) * 4
-      val correctPath = Line(List(
+      val correctPath = LineString(List(
         (0.0, 0.0),
         (1.0, 1.0),
         (2.0, 2.0),
@@ -64,7 +66,7 @@ class CostDistanceWithPathsSpec extends FunSpec with Matchers {
       ), 5, 5)
 
       val correctCost = math.sqrt(2) + 6
-      val correctPath = Line(List(
+      val correctPath = LineString(List(
         (0.0, 0.0),
         (1.0, 0.0),
         (2.0, 0.0),
@@ -96,12 +98,12 @@ class CostDistanceWithPathsSpec extends FunSpec with Matchers {
 
       val correctCost = math.sqrt(2) * 4 + 2
       val correctPaths = Set(
-        Line(List(
+        LineString(List(
           (0.0, 0.0), (1.0, 1.0), (2.0, 2.0),
           (3.0, 1.0), (4.0, 2.0), (4.0, 3.0),
           (4.0, 4.0)
         )),
-          Line(List(
+          LineString(List(
             (0.0, 0.0), (1.0, 1.0), (2.0, 2.0),
             (1.0, 3.0), (2.0, 4.0), (3.0, 4.0),
             (4.0, 4.0)
@@ -130,12 +132,12 @@ class CostDistanceWithPathsSpec extends FunSpec with Matchers {
 
     val correctCost = math.sqrt(2) * 4 + 2
     val correctPaths = Set(
-      Line(List(
+      LineString(List(
         (0.0, 0.0), (1.0, 0.0), (2.0, 0.0),
         (3.0, 1.0), (2.0, 2.0), (3.0, 3.0),
         (4.0, 4.0)
       )),
-      Line(List(
+      LineString(List(
         (0.0, 0.0), (0.0, 1.0), (0.0, 2.0),
         (1.0, 3.0), (2.0, 2.0), (3.0, 3.0),
         (4.0, 4.0)

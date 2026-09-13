@@ -16,10 +16,10 @@
 
 package geotrellis.spark.distance
 
-import com.vividsolutions.jts.geom.Coordinate
+import org.locationtech.jts.geom.Coordinate
 import org.apache.spark.rdd.RDD
 
-import geotrellis.spark._
+import geotrellis.layer.SpatialKey
 import geotrellis.vector.{MultiPoint, Point}
 
 object Implicits extends Implicits

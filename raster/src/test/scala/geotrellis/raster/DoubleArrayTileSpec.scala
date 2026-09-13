@@ -16,22 +16,20 @@
 
 package geotrellis.raster
 
-import geotrellis._
 import geotrellis.raster.testkit._
-
-import org.scalatest._
 
 import spire.syntax.cfor._
 
-class DoubleArrayTileSpec extends FunSpec
-                                   with Matchers
-                                   with RasterMatchers
-                                   with TileBuilders {
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.funspec.AnyFunSpec
+
+class DoubleArrayTileSpec extends AnyFunSpec with Matchers with RasterMatchers with TileBuilders {
+
   describe("DoubleArrayTile.toByteArray") {
     it("converts back and forth.") {
       val tile = probabilityRaster
       val (cols, rows) = (tile.cols, tile.rows)
-      val tile2 = DoubleArrayTile.fromBytes(tile.toBytes, cols, rows)
+      val tile2 = DoubleArrayTile.fromBytes(tile.toBytes(), cols, rows)
       cfor(0)(_ < rows, _ + 1) { row =>
         cfor(0)(_ < cols, _ + 1) { col =>
           withClue(s"Values different at ($col, $row)") {

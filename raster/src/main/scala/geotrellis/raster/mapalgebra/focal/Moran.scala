@@ -37,7 +37,7 @@ import geotrellis.raster.histogram.FastMapHistogram
  *                        of a double typed Tile (FloatConstantNoDataCellType, DoubleConstantNoDataCellType).
  */
 object TileMoransICalculation {
-  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds], target: TargetCell = TargetCell.All): Tile = {
+  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds[Int]], target: TargetCell = TargetCell.All): Tile = {
     new CursorCalculation[Tile](tile, n, bounds, target)
       with DoubleArrayTileResult
     {
@@ -46,7 +46,7 @@ object TileMoransICalculation {
       var `stddev^2` = 0.0
 
       val h = FastMapHistogram.fromTile(r)
-      val stats = h.statistics
+      val stats = h.statistics()
       require(stats.nonEmpty)
       val Statistics(_, m, _, _, s, _, _) = stats.get
       mean = m
@@ -88,7 +88,7 @@ object TileMoransICalculation {
  *                        of a double typed Tile (FloatConstantNoDataCellType, DoubleConstantNoDataCellType).
  */
 object ScalarMoransICalculation {
-  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds]): Double = {
+  def apply(tile: Tile, n: Neighborhood, bounds: Option[GridBounds[Int]]): Double = {
     new CursorCalculation[Double](tile, n, bounds, TargetCell.All) {
       var mean: Double = 0
       var `stddev^2`: Double = 0
@@ -97,7 +97,7 @@ object ScalarMoransICalculation {
       var ws: Int = 0
 
       val h = FastMapHistogram.fromTile(r)
-      val stats = h.statistics
+      val stats = h.statistics()
       require(stats.nonEmpty)
       val Statistics(_, m, _, _, s, _, _) = stats.get
       mean = m
